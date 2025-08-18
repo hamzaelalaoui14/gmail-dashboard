@@ -4,6 +4,12 @@
   --promotions-color: #e9dcf8;
   --updates-color: #fef3d0;
   --social-color: #d1e7f7;
+  --forums-color: #f0f9e8; /* NEW: Forums color */
+  --spam-color: #fee2e2; /* NEW: Spam color (light red) */
+  --important-color: #fed7aa; /* Orange for important */
+  --starred-color: #fef08a; /* Yellow for starred */
+  --sent-color: #e0e7ff; /* Light blue for sent */
+  --draft-color: #f3f4f6; /* Gray for drafts */
   --default-color: #e5e7eb;
   --primary-bg: #f5f7fa;
   --sidebar-bg: #ffffff;
@@ -14,11 +20,36 @@
   --border-color: #e5e7eb;
   --primary-blue: #2563eb;
 }
+
+/* NEW: Spam email styling */
+.email-card-horizontal.spam {
+  border-left: 4px solid #ef4444;
+  opacity: 0.8;
+}
+
+.email-card-horizontal.spam .email-label {
+  background-color: var(--spam-color) !important;
+  color: #dc2626 !important;
+  font-weight: bold;
+}
+
+/* NEW: Unread email emphasis */
+.email-card-horizontal.unread {
+  border-left: 3px solid var(--primary-blue);
+  background-color: #fafbff;
+}
+
+.email-card-horizontal.unread .subject {
+  font-weight: 700;
+}
+
+/* Rest of your existing CSS... */
 .time-ago {
   font-size: 12px;
   color: var(--text-muted);
   font-style: italic;
 }
+
 .gmass-dashboard {
   padding: 20px;
   font-family: Arial, sans-serif;
@@ -131,11 +162,10 @@
   margin-top: 5px;
   font-size: 1rem;
   font-weight: 500;
-  white-space: normal;        /* allow line breaks */
-  word-wrap: break-word;      /* break long words if needed */
-  overflow: visible;          /* show everything */
+  white-space: normal;
+  word-wrap: break-word;
+  overflow: visible;
 }
-
 
 .email-footer {
   margin-top: auto;
@@ -149,7 +179,6 @@
   white-space: normal;
   overflow-wrap: break-word;
 }
-
 
 /* Keep all your existing CSS styles */
 
