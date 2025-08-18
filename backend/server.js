@@ -4,7 +4,9 @@ import cors from "cors";
 import bodyParser from "body-parser";
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: "https://gmail-dashboard-ks0d3rs7t-hamzas-projects-4f002b6e.vercel.app"
+}));
 app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
