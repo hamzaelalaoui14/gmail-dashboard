@@ -7,14 +7,16 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
+// Use dynamic port from environment
 const PORT = process.env.PORT || 3000;
 
-// ✅ Use environment variables instead of credentials.json
-if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET) {
-  console.error("❌ Missing Google OAuth environment variables (CLIENT_ID, CLIENT_SECRET).");
+// Validate required environment variables
+if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || !process.env.REDIRECT_URI) {
+  console.error("❌ Missing Google OAuth environment variables (CLIENT_ID, CLIENT_SECRET, REDIRECT_URI).");
   process.exit(1);
 }
 
+// Initialize OAuth2 client using env variables only
 const oAuth2Client = new google.auth.OAuth2(
   process.env.CLIENT_ID,
   process.env.CLIENT_SECRET,
@@ -23,7 +25,7 @@ const oAuth2Client = new google.auth.OAuth2(
 
 let accounts = [];
 
-// Authentication endpoints
+// --- Authentication Endpoints ---
 app.get("/auth", (req, res) => {
   const url = oAuth2Client.generateAuthUrl({
     access_type: "offline",
@@ -33,6 +35,8 @@ app.get("/auth", (req, res) => {
 });
 
 app.get("/auth/callback", async (req, res) => {
+  console.log("⚡ Callback hit with query:", req.query);
+
   try {
     const { code } = req.query;
     const { tokens } = await oAuth2Client.getToken(code);
@@ -40,10 +44,10 @@ app.get("/auth/callback", async (req, res) => {
 
     const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
     const profile = await gmail.users.getProfile({ userId: "me" });
-    
+
     accounts.push({ email: profile.data.emailAddress, tokens });
     console.log(`✅ Account ${profile.data.emailAddress} connected successfully`);
-    
+
     res.send(`Account ${profile.data.emailAddress} connected!`);
   } catch (err) {
     console.error("❌ Auth callback error:", err);
@@ -51,8 +55,8 @@ app.get("/auth/callback", async (req, res) => {
   }
 });
 
-// ---- Gmail label mapping function (unchanged) ----
-const mapGmailLabelToAppLabel = (labelIds, subject = "", queryHint = null) => {
+// --- Gmail label mapping ---
+const mapGmailLabelToAppLabel = (labelIds) => {
   if (!labelIds || labelIds.length === 0) return "INBOX";
 
   if (labelIds.includes("SPAM")) return "SPAM";
@@ -68,25 +72,26 @@ const mapGmailLabelToAppLabel = (labelIds, subject = "", queryHint = null) => {
   return "INBOX";
 };
 
-// ---- Fetch emails per account (unchanged except using env OAuth2 client) ----
+// --- Fetch emails ---
 const fetchEmailsForAccount = async (account) => {
   try {
     oAuth2Client.setCredentials(account.tokens);
     const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
 
-    let allMessages = [];
     const queries = [
-      { query: "in:inbox", location: "INBOX" },
-      { query: "in:spam", location: "SPAM" },
-      { query: "category:promotions", location: "PROMOTIONS" },
-      { query: "category:updates", location: "UPDATES" },
-      { query: "category:forums", location: "FORUMS" },
-      { query: "category:social", location: "SOCIAL" },
-      { query: "is:important", location: "IMPORTANT" },
-      { query: "is:starred", location: "STARRED" }
+      { query: "in:inbox" },
+      { query: "in:spam" },
+      { query: "category:promotions" },
+      { query: "category:updates" },
+      { query: "category:forums" },
+      { query: "category:social" },
+      { query: "is:important" },
+      { query: "is:starred" }
     ];
 
-    for (const { query, location } of queries) {
+    let allMessages = [];
+
+    for (const { query } of queries) {
       try {
         const listResponse = await gmail.users.messages.list({
           userId: "me",
@@ -98,13 +103,12 @@ const fetchEmailsForAccount = async (account) => {
         if (listResponse.data.messages) {
           allMessages.push(...listResponse.data.messages);
         }
-
-        await new Promise(resolve => setTimeout(resolve, 100));
       } catch (queryError) {
-        console.error(`⚠️ Failed to fetch from ${location}:`, queryError.message);
+        console.error(`⚠️ Failed to fetch query "${query}":`, queryError.message);
       }
     }
 
+    // Remove duplicates
     const uniqueMessages = allMessages.filter(
       (msg, index, self) => index === self.findIndex(m => m.id === msg.id)
     );
@@ -123,14 +127,14 @@ const fetchEmailsForAccount = async (account) => {
         const subject = headers.find((h) => h.name === "Subject")?.value || "No Subject";
         const from = headers.find((h) => h.name === "From")?.value || "Unknown Sender";
         const date = headers.find((h) => h.name === "Date")?.value;
-        const emailDate = date 
+        const emailDate = date
           ? new Date(date).toISOString()
-          : details.data.internalDate 
+          : details.data.internalDate
             ? new Date(parseInt(details.data.internalDate)).toISOString()
             : new Date().toISOString();
 
         const emailLabels = details.data.labelIds || [];
-        const mappedLabel = mapGmailLabelToAppLabel(emailLabels, subject);
+        const mappedLabel = mapGmailLabelToAppLabel(emailLabels);
 
         return {
           id: details.data.id,
@@ -152,7 +156,7 @@ const fetchEmailsForAccount = async (account) => {
     const emailResults = await Promise.allSettled(emailPromises);
 
     return emailResults
-      .filter(result => result.status === 'fulfilled' && result.value !== null)
+      .filter(result => result.status === "fulfilled" && result.value !== null)
       .map(result => result.value);
 
   } catch (err) {
@@ -161,20 +165,14 @@ const fetchEmailsForAccount = async (account) => {
   }
 };
 
-// ---- Routes ----
+// --- Routes ---
 app.get("/emails", async (req, res) => {
+  if (accounts.length === 0) return res.json([]);
+
   try {
-    if (accounts.length === 0) return res.json([]);
+    const accountResults = await Promise.all(accounts.map(account => fetchEmailsForAccount(account)));
 
-    const accountPromises = accounts.map(account => fetchEmailsForAccount(account));
-    const accountResults = await Promise.allSettled(accountPromises);
-
-    let allEmails = [];
-    accountResults.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        allEmails.push(...result.value);
-      }
-    });
+    const allEmails = accountResults.flat();
 
     const sortedEmails = allEmails
       .sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -187,10 +185,11 @@ app.get("/emails", async (req, res) => {
   }
 });
 
-// Health check + accounts
+// Health + accounts
 app.get("/health", (req, res) => {
   res.json({ status: "ok", accounts: accounts.length, timestamp: new Date().toISOString() });
 });
+
 app.get("/accounts", (req, res) => {
   res.json(accounts.map(acc => ({ email: acc.email })));
 });
@@ -201,6 +200,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
+// Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Backend running at http://localhost:${PORT}`);
+  console.log(`🚀 Backend running at port ${PORT}`);
 });
