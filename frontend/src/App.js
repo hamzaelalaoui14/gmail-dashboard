@@ -1,20 +1,21 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiInbox, FiAlertCircle, FiTag, FiUsers } from "react-icons/fi";
+import { FiInbox } from "react-icons/fi";
 import "./App.css";
 
 function App() {
   const [emails, setEmails] = useState([]);
-  const [selectedAccount, setSelectedAccount] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch emails - unchanged from your backend
+  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://cognitive-isabella-gmass-9839fc62.koyeb.app";
+
+  // Fetch emails
   useEffect(() => {
     const fetchEmails = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/emails");
+        const res = await axios.get(`${BACKEND_URL}/emails`);
         setEmails(res.data);
       } catch (err) {
         console.error("Failed to load emails:", err);
@@ -24,66 +25,55 @@ function App() {
     };
 
     fetchEmails();
-    const interval = setInterval(fetchEmails, 10000);
+    const interval = setInterval(fetchEmails, 10000); // refresh every 10 sec
     return () => clearInterval(interval);
-  }, []);
+  }, [BACKEND_URL]);
 
-  // Filter logic unchanged
-  const filteredEmails = emails
-    .filter((mail) => !selectedAccount || mail.account === selectedAccount)
-    .filter((mail) => 
-      mail.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mail.from.toLowerCase().includes(searchQuery.toLowerCase())
+  // Group emails by account
+  const groupedEmails = emails.reduce((acc, mail) => {
+    if (!acc[mail.account]) acc[mail.account] = [];
+    acc[mail.account].push(mail);
+    return acc;
+  }, {});
+
+  // Filter emails based on search
+  const filterEmails = (emails) =>
+    emails.filter(
+      (mail) =>
+        mail.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        mail.from.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-  // Extract accounts unchanged
-  const accounts = [...new Set(emails.map((mail) => mail.account))];
-
-  // Helper functions for the UI
-  const getLabelFromEmail = (email) => {
-    // Mock label detection - adapt based on your actual data
-    if (email.subject.toLowerCase().includes("promo")) return "PROMOTIONS";
-    if (email.from.toLowerCase().includes("notification")) return "UPDATES";
-    if (email.from.toLowerCase().includes("linkedin")) return "SOCIAL";
-    return "INBOX";
-  };
-
+  // Get label color
   const getLabelColor = (label) => {
-    switch(label) {
-      case 'INBOX': return 'var(--inbox-color)';
-      case 'PROMOTIONS': return 'var(--promotions-color)';
-      case 'UPDATES': return 'var(--updates-color)';
-      case 'SOCIAL': return 'var(--social-color)';
-      default: return 'var(--default-color)';
+    switch (label) {
+      case "INBOX":
+        return "var(--inbox-color)";
+      case "PROMOTIONS":
+        return "var(--promotions-color)";
+      case "UPDATES":
+        return "var(--updates-color)";
+      case "SOCIAL":
+        return "var(--social-color)";
+      case "FORUM":
+        return "var(--forum-color)";
+      case "IMPORTANT":
+        return "var(--important-color)";
+      case "STARRED":
+        return "var(--starred-color)";
+      case "SENT":
+        return "var(--sent-color)";
+      case "DRAFT":
+        return "var(--draft-color)";
+      case "SPAM":
+        return "var(--spam-color)";
+      default:
+        return "var(--default-color)";
     }
   };
 
   return (
     <div className="gmass-dashboard">
-      {/* Sidebar - enhanced but same functionality */}
-      <div className="sidebar">
-        <div className="account-switcher">
-          <div 
-            className={`account ${!selectedAccount ? "active" : ""}`}
-            onClick={() => setSelectedAccount(null)}
-          >
-            <FiUsers className="account-icon" />
-            All Accounts
-          </div>
-          {accounts.map((account) => (
-            <div 
-              key={account} 
-              className={`account ${selectedAccount === account ? "active" : ""}`}
-              onClick={() => setSelectedAccount(account)}
-            >
-              <FiInbox className="account-icon" />
-              {account}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Main Content - enhanced with animations */}
       <div className="content">
         <div className="search-bar">
           <input
@@ -97,45 +87,50 @@ function App() {
         {isLoading ? (
           <div className="loading-indicator">Loading emails...</div>
         ) : (
-          <div className="email-grid">
-            <AnimatePresence>
-              {filteredEmails.map((mail) => (
-                <motion.div
-                  key={mail.id}
-                  className="email-card"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  layout
-                >
-                  <div className="email-header">
-                    <div className="avatar">
-                      {mail.from.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="sender">{mail.from}</div>
-                      <div className="account-name">{mail.account}</div>
-                    </div>
-                    <div 
-                      className="email-label"
-                      style={{ backgroundColor: getLabelColor(getLabelFromEmail(mail)) }}
-                    >
-                      {getLabelFromEmail(mail)}
-                    </div>
-                  </div>
-                  <div className="email-body">
-                    <h3 className="subject">{mail.subject}</h3>
-                    <p className="snippet">{mail.snippet}</p>
-                  </div>
-                  <div className="email-footer">
-                    <span className="time">
-                      {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+          <div className="accounts-container">
+            {Object.entries(groupedEmails).map(([account, accountEmails]) => (
+              <div key={account} className="account-section">
+                <div className="account-header">
+                  <FiInbox className="account-icon" />
+                  <h3>{account}</h3>
+                </div>
+
+                <div className="emails-horizontal-scroll">
+                  <AnimatePresence>
+                    {filterEmails(accountEmails).map((mail) => (
+                      <motion.div
+                        key={mail.id}
+                        className="email-card-horizontal"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3 }}
+                        layout
+                      >
+                        <div className="email-header">
+                          <div className="avatar">{mail.from.charAt(0).toUpperCase()}</div>
+                          <div
+                            className="email-label"
+                            style={{ backgroundColor: getLabelColor(mail.label) }}
+                          >
+                            {mail.label}
+                          </div>
+                        </div>
+                        <div className="email-body">
+                          <div className="sender">{mail.from}</div>
+                          <h3 className="subject">{mail.subject}</h3>
+                          <p className="snippet">{mail.snippet}</p>
+                        </div>
+                        <div className="email-footer">
+                          <span className="time">
+                            {new Date(mail.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
