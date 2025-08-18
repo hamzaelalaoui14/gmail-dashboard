@@ -18,7 +18,7 @@ if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET) {
 const oAuth2Client = new google.auth.OAuth2(
   process.env.CLIENT_ID,
   process.env.CLIENT_SECRET,
-  process.env.REDIRECT_URI || "http://localhost:3000/auth/callback"
+  process.env.REDIRECT_URI || "https://gmail-dashboard-production.up.railway.app/auth/callback"
 );
 
 let accounts = [];
