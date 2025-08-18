@@ -5,14 +5,13 @@ import bodyParser from "body-parser";
 
 const app = express();
 
-// ⚡ CORS - allow your frontend URL
-const FRONTEND_URL = process.env.FRONTEND_URL;
+// ⚡ CORS - allow your Vercel frontend
+const FRONTEND_URL = "https://gmail-dashboard-ks0d3rs7t-hamzas-projects-4f002b6e.vercel.app";
 app.use(cors({ origin: FRONTEND_URL }));
 app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
 
-// ✅ Environment variables check
 const { CLIENT_ID, CLIENT_SECRET, REDIRECT_URI } = process.env;
 if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
   console.error("❌ Missing Google OAuth environment variables (CLIENT_ID, CLIENT_SECRET, REDIRECT_URI).");
@@ -47,14 +46,14 @@ app.get("/auth/callback", async (req, res) => {
     accounts.push({ email: profile.data.emailAddress, tokens });
     console.log(`✅ Account ${profile.data.emailAddress} connected`);
 
-    res.redirect(FRONTEND_URL); // redirect back to frontend after auth
+    res.redirect(FRONTEND_URL); // back to Vercel frontend
   } catch (err) {
     console.error("❌ Auth callback error:", err.message);
     res.status(500).send("Authentication failed");
   }
 });
 
-// --- Fetch emails endpoint ---
+// --- Emails endpoint ---
 app.get("/emails", async (req, res) => {
   try {
     if (accounts.length === 0) return res.json([]);
@@ -78,6 +77,8 @@ app.get("/emails", async (req, res) => {
         const subject = headers.find((h) => h.name === "Subject")?.value || "No Subject";
         const from = headers.find((h) => h.name === "From")?.value || "Unknown Sender";
         const date = headers.find((h) => h.name === "Date")?.value || details.data.internalDate || new Date().toISOString();
+        const label = details.data.labelIds?.[0] || "INBOX";
+
         return {
           id: details.data.id,
           account: account.email,
@@ -85,7 +86,7 @@ app.get("/emails", async (req, res) => {
           from,
           date: new Date(date).toISOString(),
           snippet: details.data.snippet || "",
-          label: details.data.labelIds?.[0] || "INBOX",
+          label,
         };
       });
 
@@ -93,7 +94,6 @@ app.get("/emails", async (req, res) => {
       allEmails.push(...emails);
     }
 
-    // sort by newest
     allEmails.sort((a, b) => new Date(b.date) - new Date(a.date));
     res.json(allEmails.slice(0, 100));
   } catch (err) {
@@ -102,12 +102,12 @@ app.get("/emails", async (req, res) => {
   }
 });
 
-// --- Health check ---
+// --- Health ---
 app.get("/health", (req, res) => {
   res.json({ status: "ok", accounts: accounts.length });
 });
 
 // --- Start server ---
 app.listen(PORT, () => {
-  console.log(`🚀 Backend running on port ${PORT}`);
+  console.log(`🚀 Backend running at https://cognitive-isabella-gmass-9839fc62.koyeb.app`);
 });
