@@ -22,67 +22,51 @@ if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
 const oAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
 let accounts = [];
 
-// 🚀 NEW: Label mapping function
+// Label mapping function (no changes needed here)
 const mapGmailLabelsToCategory = (labelIds) => {
   if (!labelIds || labelIds.length === 0) return "INBOX";
-  
-  // Check for spam first (highest priority)
   if (labelIds.includes("SPAM")) return "SPAM";
-  
-  // Check for category labels
   if (labelIds.includes("CATEGORY_PROMOTIONS")) return "PROMOTIONS";
   if (labelIds.includes("CATEGORY_SOCIAL")) return "SOCIAL";
   if (labelIds.includes("CATEGORY_UPDATES")) return "UPDATES";
   if (labelIds.includes("CATEGORY_FORUMS")) return "FORUMS";
-  
-  // Check for other important labels
   if (labelIds.includes("IMPORTANT")) return "IMPORTANT";
   if (labelIds.includes("STARRED")) return "STARRED";
   if (labelIds.includes("SENT")) return "SENT";
   if (labelIds.includes("DRAFT")) return "DRAFT";
-  
-  // Default to INBOX for primary emails
   if (labelIds.includes("INBOX")) return "INBOX";
-  
-  return "INBOX"; // fallback
+  return "INBOX";
 };
 
-// 🚀 NEW: Function to get emails from all folders including spam
+// =================================================================
+// 🚀 MODIFIED SECTION: This function gets the latest N emails.
+// =================================================================
 const getEmailsFromAllFolders = async (gmail) => {
-  const queries = [
-    "in:inbox",           // Primary inbox
-    "in:spam",            // Spam folder  
-    "category:promotions", // Promotions
-    "category:social",     // Social
-    "category:updates",    // Updates
-    "category:forums"      // Forums
-  ];
+  // This query excludes drafts and sent items to focus on what you've received.
+  // The API returns the newest emails first by default.
+  const query = "-in:draft -in:sent";
   
   const allMessages = [];
   
-  for (const query of queries) {
-    try {
-      const listResponse = await gmail.users.messages.list({
-        userId: "me",
-        q: query,
-        maxResults: 10, // Reduced per category to avoid overwhelming
-      });
-      
-      if (listResponse.data.messages) {
-        allMessages.push(...listResponse.data.messages);
-      }
-    } catch (err) {
-      console.error(`❌ Error fetching emails for query "${query}":`, err.message);
+  try {
+    const listResponse = await gmail.users.messages.list({
+      userId: "me",
+      q: query,
+      maxResults: 30, // We set a limit for the 30 most recent received emails.
+    });
+    
+    if (listResponse.data.messages) {
+      allMessages.push(...listResponse.data.messages);
     }
+  } catch (err) {
+    console.error(`❌ Error fetching emails with query "${query}":`, err.message);
   }
   
-  // Remove duplicates based on message ID
-  const uniqueMessages = allMessages.filter((msg, index, self) => 
-    index === self.findIndex(m => m.id === msg.id)
-  );
-  
-  return uniqueMessages;
+  return allMessages;
 };
+// =================================================================
+// End of modified section
+// =================================================================
 
 // --- Auth endpoints ---
 app.get("/auth", (req, res) => {
@@ -113,7 +97,7 @@ app.get("/auth/callback", async (req, res) => {
   }
 });
 
-// --- 🚀 UPDATED: Emails endpoint with proper label detection ---
+// --- Emails endpoint ---
 app.get("/emails", async (req, res) => {
   try {
     if (accounts.length === 0) return res.json([]);
@@ -124,7 +108,7 @@ app.get("/emails", async (req, res) => {
       oAuth2Client.setCredentials(account.tokens);
       const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
 
-      // 🚀 NEW: Get emails from all categories including spam
+      // This now calls the updated function to get the latest N emails
       const messages = await getEmailsFromAllFolders(gmail);
       
       if (messages.length === 0) continue;
@@ -142,10 +126,8 @@ app.get("/emails", async (req, res) => {
           const from = headers.find((h) => h.name === "From")?.value || "Unknown Sender";
           const date = headers.find((h) => h.name === "Date")?.value || details.data.internalDate || new Date().toISOString();
           
-          // 🚀 NEW: Proper label mapping
           const category = mapGmailLabelsToCategory(details.data.labelIds);
           
-          // 🚀 NEW: Extract sender name and email
           const fromMatch = from.match(/^(.+?)\s*<(.+)>$/) || from.match(/^(.+)$/);
           const senderName = fromMatch ? fromMatch[1]?.trim().replace(/^["']|["']$/g, '') : from;
           const senderEmail = fromMatch && fromMatch[2] ? fromMatch[2].trim() : from;
@@ -159,8 +141,8 @@ app.get("/emails", async (req, res) => {
             senderEmail,
             date: new Date(date).toISOString(),
             snippet: details.data.snippet || "",
-            label: category, // Now properly categorized
-            labelIds: details.data.labelIds, // Include raw labels for debugging
+            label: category,
+            labelIds: details.data.labelIds,
             threadId: details.data.threadId,
             isRead: !details.data.labelIds?.includes("UNREAD"),
             isSpam: details.data.labelIds?.includes("SPAM")
@@ -179,13 +161,9 @@ app.get("/emails", async (req, res) => {
     // Sort by date (newest first)
     allEmails.sort((a, b) => new Date(b.date) - new Date(a.date));
     
-    console.log(`📧 Fetched ${allEmails.length} emails across ${accounts.length} accounts`);
-    console.log("Label distribution:", allEmails.reduce((acc, email) => {
-      acc[email.label] = (acc[email.label] || 0) + 1;
-      return acc;
-    }, {}));
-
-    res.json(allEmails.slice(0, 100));
+    console.log(`📧 Fetched ${allEmails.length} latest emails across ${accounts.length} accounts`);
+    
+    res.json(allEmails);
   } catch (err) {
     console.error("❌ Failed to fetch emails:", err.message);
     res.status(500).json({ error: "Failed to fetch emails" });
