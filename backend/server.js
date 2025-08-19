@@ -42,17 +42,14 @@ const mapGmailLabelsToCategory = (labelIds) => {
 
 // Function to get the latest received emails, including spam
 const getEmailsFromAllFolders = async (gmail) => {
-  // This "whitelist" query is precise: it fetches emails that are in the inbox, spam, or any
-  // of the main categories. This correctly excludes sent mail and drafts.
   const query = "{in:inbox in:spam category:promotions category:social category:updates category:forums}";
-  
   const allMessages = [];
   
   try {
     const listResponse = await gmail.users.messages.list({
       userId: "me",
       q: query,
-      maxResults: 30, // Fetches the 30 most recent emails matching the query
+      maxResults: 30,
     });
     
     if (listResponse.data.messages) {
@@ -85,7 +82,6 @@ app.get("/auth/callback", async (req, res) => {
     const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
     const profile = await gmail.users.getProfile({ userId: "me" });
 
-    // Avoid adding duplicate accounts
     if (!accounts.find(acc => acc.email === profile.data.emailAddress)) {
       accounts.push({ email: profile.data.emailAddress, tokens });
       console.log(`✅ Account ${profile.data.emailAddress} connected`);
@@ -100,27 +96,49 @@ app.get("/auth/callback", async (req, res) => {
   }
 });
 
-// --- Emails endpoint ---
+// --- Emails endpoint with advanced date parsing ---
 app.get("/emails", async (req, res) => {
   try {
     if (accounts.length === 0) return res.json([]);
-
     const allEmails = [];
 
     for (const account of accounts) {
       oAuth2Client.setCredentials(account.tokens);
       const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
-
       const messages = await getEmailsFromAllFolders(gmail);
       
       if (messages.length > 0) {
         const emailPromises = messages.map(async (msg) => {
           try {
-            const details = await gmail.users.messages.get({ userId: "me", id: msg.id, format: "full" });
+            const details = await gmail.users.messages.get({ 
+              userId: "me", 
+              id: msg.id, 
+              format: "metadata",
+              metadataHeaders: ["Subject", "From", "Date", "Received"]
+            });
+
             const headers = details.data.payload.headers || [];
             const subject = headers.find((h) => h.name === "Subject")?.value || "No Subject";
             const from = headers.find((h) => h.name === "From")?.value || "Unknown Sender";
-            const date = headers.find((h) => h.name === "Date")?.value || new Date().toISOString();
+            
+            // --- Logic to parse the 'Received' header for the most accurate time ---
+            let parsedDate;
+            try {
+              const receivedHeader = headers.find(h => h.name === 'Received' || h.name === 'received');
+              
+              if (receivedHeader && receivedHeader.value) {
+                const parts = receivedHeader.value.split(';');
+                const dateString = parts[parts.length - 1].trim();
+                parsedDate = new Date(dateString).toISOString();
+              }
+            } catch (e) {
+              console.error("Could not parse Received header, falling back.", e);
+              parsedDate = null;
+            }
+            
+            // Use the parsed date, or fall back to internalDate for safety.
+            const date = parsedDate || (details.data.internalDate ? new Date(parseInt(details.data.internalDate)).toISOString() : new Date().toISOString());
+            
             const category = mapGmailLabelsToCategory(details.data.labelIds);
             const fromMatch = from.match(/^(.+?)\s*<(.+)>$/) || from.match(/^(.+)$/);
             const senderName = fromMatch ? fromMatch[1]?.trim().replace(/^["']|["']$/g, '') : from;
@@ -133,7 +151,7 @@ app.get("/emails", async (req, res) => {
               from,
               senderName,
               senderEmail,
-              date: new Date(date).toISOString(),
+              date: date,
               snippet: details.data.snippet || "",
               label: category,
               isRead: !details.data.labelIds?.includes("UNREAD"),
@@ -149,7 +167,6 @@ app.get("/emails", async (req, res) => {
         allEmails.push(...emails);
       }
       
-      // IMPORTANT FIX: Save the potentially refreshed tokens for the next poll
       account.tokens = oAuth2Client.credentials;
     }
 
