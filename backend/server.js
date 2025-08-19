@@ -1,15 +1,117 @@
-// --- Emails endpoint with advanced date parsing ---
+import express from "express";
+import { google } from "googleapis";
+import cors from "cors";
+import bodyParser from "body-parser";
+
+const app = express();
+
+// ⚡ CORS - allow your Vercel frontend
+const FRONTEND_URL = "https://gmail-dashboard.vercel.app";
+app.use(cors({ origin: FRONTEND_URL }));
+app.use(bodyParser.json());
+
+const PORT = process.env.PORT || 3000;
+const { CLIENT_ID, CLIENT_SECRET, REDIRECT_URI } = process.env;
+
+if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
+  console.error("❌ Missing Google OAuth environment variables (CLIENT_ID, CLIENT_SECRET, REDIRECT_URI).");
+  process.exit(1);
+}
+
+// Initialize OAuth2 - This client is used for the initial auth steps
+const oAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+let accounts = [];
+
+// Label mapping function
+const mapGmailLabelsToCategory = (labelIds) => {
+  if (!labelIds || labelIds.length === 0) return "INBOX";
+  
+  if (labelIds.includes("SPAM")) return "SPAM";
+  if (labelIds.includes("CATEGORY_PROMOTIONS")) return "PROMOTIONS";
+  if (labelIds.includes("CATEGORY_SOCIAL")) return "SOCIAL";
+  if (labelIds.includes("CATEGORY_UPDATES")) return "UPDATES";
+  if (labelIds.includes("CATEGORY_FORUMS")) return "FORUMS";
+  if (labelIds.includes("IMPORTANT")) return "IMPORTANT";
+  if (labelIds.includes("STARRED")) return "STARRED";
+  if (labelIds.includes("SENT")) return "SENT";
+  if (labelIds.includes("DRAFT")) return "DRAFT";
+  if (labelIds.includes("INBOX")) return "INBOX";
+  
+  return "INBOX";
+};
+
+// Function to get the latest received emails, including spam
+const getEmailsFromAllFolders = async (gmail) => {
+  const query = "{in:inbox in:spam category:promotions category:social category:updates category:forums}";
+  const allMessages = [];
+  
+  try {
+    const listResponse = await gmail.users.messages.list({
+      userId: "me",
+      q: query,
+      maxResults: 30,
+    });
+    
+    if (listResponse.data.messages) {
+      allMessages.push(...listResponse.data.messages);
+    }
+  } catch (err) {
+    console.error(`❌ Error fetching emails with query "${query}":`, err.message);
+  }
+  
+  return allMessages;
+};
+
+// --- Auth endpoints ---
+app.get("/auth", (req, res) => {
+  const url = oAuth2Client.generateAuthUrl({
+    access_type: "offline",
+    scope: ["https://www.googleapis.com/auth/gmail.readonly"],
+  });
+  res.redirect(url);
+});
+
+app.get("/auth/callback", async (req, res) => {
+  try {
+    const { code } = req.query;
+    if (!code) return res.status(400).send("❌ Missing code in query");
+
+    const { tokens } = await oAuth2Client.getToken(code);
+    oAuth2Client.setCredentials(tokens);
+
+    const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+    const profile = await gmail.users.getProfile({ userId: "me" });
+
+    if (!accounts.find(acc => acc.email === profile.data.emailAddress)) {
+      accounts.push({ email: profile.data.emailAddress, tokens });
+      console.log(`✅ Account ${profile.data.emailAddress} connected`);
+    } else {
+      console.log(`ℹ️ Account ${profile.data.emailAddress} already connected`);
+    }
+    
+    res.redirect(FRONTEND_URL);
+  } catch (err) {
+    console.error("❌ Auth callback error:", err.message);
+    res.status(500).send("Authentication failed");
+  }
+});
+
+
+// =================================================================================
+// --- CORRECTED EMAILS ENDPOINT ---
+// =================================================================================
 app.get("/emails", async (req, res) => {
   try {
     if (accounts.length === 0) return res.json([]);
     const allEmails = [];
 
     for (const account of accounts) {
-      // --- FIX: Create a NEW and ISOLATED OAuth2 client for each user ---
+      // --- FIX: Create a NEW, ISOLATED OAuth2 client for EACH user in the loop.
+      // This prevents the credentials of one user from being used for another user's API calls.
       const userOAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
       userOAuth2Client.setCredentials(account.tokens);
 
-      // Pass this new, isolated client to the Gmail service
+      // --- FIX: Use the new, isolated client for this user's API requests.
       const gmail = google.gmail({ version: "v1", auth: userOAuth2Client });
       
       const messages = await getEmailsFromAllFolders(gmail);
@@ -24,7 +126,6 @@ app.get("/emails", async (req, res) => {
               metadataHeaders: ["Subject", "From", "Date", "Received"]
             });
 
-            // ... (the rest of your email processing logic remains the same)
             const headers = details.data.payload.headers || [];
             const subject = headers.find((h) => h.name === "Subject")?.value || "No Subject";
             const from = headers.find((h) => h.name === "From")?.value || "Unknown Sender";
@@ -73,8 +174,8 @@ app.get("/emails", async (req, res) => {
         allEmails.push(...emails);
       }
       
-      // --- FIX: Update the account's tokens from the isolated client ---
-      // This is important for saving refreshed tokens
+      // --- FIX: Update the stored tokens from the isolated client.
+      // This is important because the client might have automatically refreshed the access token.
       account.tokens = userOAuth2Client.credentials;
     }
 
@@ -85,4 +186,14 @@ app.get("/emails", async (req, res) => {
     console.error("❌ Failed to fetch emails:", err.message);
     res.status(500).json({ error: "Failed to fetch emails" });
   }
+});
+
+// --- Health ---
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", accounts: accounts.length, timestamp: new Date().toISOString() });
+});
+
+// --- Start server ---
+app.listen(PORT, () => {
+  console.log(`🚀 Backend running at https://cognitive-isabella-gmass-9839fc62.koyeb.app`);
 });
