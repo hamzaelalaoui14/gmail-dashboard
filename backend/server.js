@@ -6,7 +6,7 @@ import bodyParser from "body-parser";
 const app = express();
 
 // ⚡ CORS - allow your Vercel frontend
-const FRONTEND_URL = "https://gmail-dashboard.vercel.app";
+const FRONTEND_URL = "https://gmail-dashboard-ks0d3rs7t-hamzas-projects-4f002b6e.vercel.app";
 app.use(cors({ origin: FRONTEND_URL }));
 app.use(bodyParser.json());
 
@@ -22,105 +22,66 @@ if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
 const oAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
 let accounts = [];
 
-// 🚀 Gmail search query: ALL received emails in last hour
-const getLastHourReceivedQuery = () => {
-  const oneHourAgo = new Date();
-  oneHourAgo.setHours(oneHourAgo.getHours() - 1);
-
-  const year = oneHourAgo.getFullYear();
-  const month = String(oneHourAgo.getMonth() + 1).padStart(2, "0");
-  const day = String(oneHourAgo.getDate()).padStart(2, "0");
-
-  return `-in:sent -in:drafts after:${year}/${month}/${day}`;
-};
-
-// 🚀 Enhanced label mapping
+// 🚀 NEW: Label mapping function
 const mapGmailLabelsToCategory = (labelIds) => {
   if (!labelIds || labelIds.length === 0) return "INBOX";
-
+  
+  // Check for spam first (highest priority)
   if (labelIds.includes("SPAM")) return "SPAM";
+  
+  // Check for category labels
   if (labelIds.includes("CATEGORY_PROMOTIONS")) return "PROMOTIONS";
   if (labelIds.includes("CATEGORY_SOCIAL")) return "SOCIAL";
   if (labelIds.includes("CATEGORY_UPDATES")) return "UPDATES";
   if (labelIds.includes("CATEGORY_FORUMS")) return "FORUMS";
+  
+  // Check for other important labels
   if (labelIds.includes("IMPORTANT")) return "IMPORTANT";
   if (labelIds.includes("STARRED")) return "STARRED";
   if (labelIds.includes("SENT")) return "SENT";
   if (labelIds.includes("DRAFT")) return "DRAFT";
+  
+  // Default to INBOX for primary emails
   if (labelIds.includes("INBOX")) return "INBOX";
-
-  return "INBOX";
+  
+  return "INBOX"; // fallback
 };
 
-// 🚀 Fetch emails for a given query
-const fetchEmailsWithQuery = async (gmail, query, account) => {
-  const listResponse = await gmail.users.messages.list({
-    userId: "me",
-    q: query,
-    maxResults: 100,
-  });
-
-  if (!listResponse.data.messages) return [];
-
-  const emailPromises = listResponse.data.messages.map(async (msg) => {
+// 🚀 NEW: Function to get emails from all folders including spam
+const getEmailsFromAllFolders = async (gmail) => {
+  const queries = [
+    "in:inbox",           // Primary inbox
+    "in:spam",            // Spam folder  
+    "category:promotions", // Promotions
+    "category:social",     // Social
+    "category:updates",    // Updates
+    "category:forums"      // Forums
+  ];
+  
+  const allMessages = [];
+  
+  for (const query of queries) {
     try {
-      const details = await gmail.users.messages.get({
+      const listResponse = await gmail.users.messages.list({
         userId: "me",
-        id: msg.id,
-        format: "full",
+        q: query,
+        maxResults: 10, // Reduced per category to avoid overwhelming
       });
-
-      const headers = details.data.payload.headers || [];
-      const subject = headers.find((h) => h.name === "Subject")?.value || "No Subject";
-      const from = headers.find((h) => h.name === "From")?.value || "Unknown Sender";
-      const dateHeader = headers.find((h) => h.name === "Date")?.value;
-      const date = dateHeader || new Date(parseInt(details.data.internalDate)).toISOString();
-
-      const category = mapGmailLabelsToCategory(details.data.labelIds);
-
-      // Parse sender name and email
-      const fromMatch = from.match(/^(.+?)\s*<(.+)>$/) || from.match(/^(.+)$/);
-      const senderName = fromMatch ? fromMatch[1]?.trim().replace(/^["']|["']$/g, "") : from;
-      const senderEmail = fromMatch && fromMatch[2] ? fromMatch[2].trim() : from;
-
-      return {
-        id: details.data.id,
-        account: account.email,
-        subject,
-        from,
-        senderName,
-        senderEmail,
-        date: new Date(date).toISOString(),
-        snippet: details.data.snippet || "",
-        label: category,
-        labelIds: details.data.labelIds,
-        threadId: details.data.threadId,
-        isRead: !details.data.labelIds?.includes("UNREAD"),
-        isSpam: details.data.labelIds?.includes("SPAM"),
-        receivedMinutesAgo: Math.floor((new Date() - new Date(date)) / (1000 * 60)),
-      };
-    } catch (emailErr) {
-      console.error(`❌ Error processing email ${msg.id}:`, emailErr.message);
-      return null;
+      
+      if (listResponse.data.messages) {
+        allMessages.push(...listResponse.data.messages);
+      }
+    } catch (err) {
+      console.error(`❌ Error fetching emails for query "${query}":`, err.message);
     }
-  });
-
-  const emails = await Promise.all(emailPromises);
-  return emails.filter((email) => email !== null);
-};
-
-// 🚀 Time distribution helper
-const getTimeDistribution = (emails) => {
-  return emails.reduce((acc, email) => {
-    const minutesAgo = email.receivedMinutesAgo;
-    let bucket = "";
-    if (minutesAgo <= 15) bucket = "0-15min";
-    else if (minutesAgo <= 30) bucket = "15-30min";
-    else if (minutesAgo <= 45) bucket = "30-45min";
-    else bucket = "45-60min";
-    acc[bucket] = (acc[bucket] || 0) + 1;
-    return acc;
-  }, {});
+  }
+  
+  // Remove duplicates based on message ID
+  const uniqueMessages = allMessages.filter((msg, index, self) => 
+    index === self.findIndex(m => m.id === msg.id)
+  );
+  
+  return uniqueMessages;
 };
 
 // --- Auth endpoints ---
@@ -152,112 +113,95 @@ app.get("/auth/callback", async (req, res) => {
   }
 });
 
-// --- Emails endpoint (last hour by default) ---
+// --- 🚀 UPDATED: Emails endpoint with proper label detection ---
 app.get("/emails", async (req, res) => {
   try {
-    if (accounts.length === 0) {
-      return res.json({
-        emails: [],
-        message: "No authenticated accounts",
-        timeRange: "last 1 hour",
+    if (accounts.length === 0) return res.json([]);
+
+    const allEmails = [];
+
+    for (const account of accounts) {
+      oAuth2Client.setCredentials(account.tokens);
+      const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+
+      // 🚀 NEW: Get emails from all categories including spam
+      const messages = await getEmailsFromAllFolders(gmail);
+      
+      if (messages.length === 0) continue;
+
+      const emailPromises = messages.map(async (msg) => {
+        try {
+          const details = await gmail.users.messages.get({ 
+            userId: "me", 
+            id: msg.id, 
+            format: "full" 
+          });
+
+          const headers = details.data.payload.headers || [];
+          const subject = headers.find((h) => h.name === "Subject")?.value || "No Subject";
+          const from = headers.find((h) => h.name === "From")?.value || "Unknown Sender";
+          const date = headers.find((h) => h.name === "Date")?.value || details.data.internalDate || new Date().toISOString();
+          
+          // 🚀 NEW: Proper label mapping
+          const category = mapGmailLabelsToCategory(details.data.labelIds);
+          
+          // 🚀 NEW: Extract sender name and email
+          const fromMatch = from.match(/^(.+?)\s*<(.+)>$/) || from.match(/^(.+)$/);
+          const senderName = fromMatch ? fromMatch[1]?.trim().replace(/^["']|["']$/g, '') : from;
+          const senderEmail = fromMatch && fromMatch[2] ? fromMatch[2].trim() : from;
+
+          return {
+            id: details.data.id,
+            account: account.email,
+            subject,
+            from,
+            senderName,
+            senderEmail,
+            date: new Date(date).toISOString(),
+            snippet: details.data.snippet || "",
+            label: category, // Now properly categorized
+            labelIds: details.data.labelIds, // Include raw labels for debugging
+            threadId: details.data.threadId,
+            isRead: !details.data.labelIds?.includes("UNREAD"),
+            isSpam: details.data.labelIds?.includes("SPAM")
+          };
+        } catch (emailErr) {
+          console.error(`❌ Error processing email ${msg.id}:`, emailErr.message);
+          return null;
+        }
       });
+
+      const emails = await Promise.all(emailPromises);
+      const validEmails = emails.filter(email => email !== null);
+      allEmails.push(...validEmails);
     }
 
-    const allEmails = [];
-
-    for (const account of accounts) {
-      oAuth2Client.setCredentials(account.tokens);
-      const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
-
-      const emails = await fetchEmailsWithQuery(gmail, getLastHourReceivedQuery(), account);
-      allEmails.push(...emails);
-    }
-
+    // Sort by date (newest first)
     allEmails.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    console.log(`📧 Fetched ${allEmails.length} emails across ${accounts.length} accounts`);
+    console.log("Label distribution:", allEmails.reduce((acc, email) => {
+      acc[email.label] = (acc[email.label] || 0) + 1;
+      return acc;
+    }, {}));
 
-    res.json({
-      emails: allEmails,
-      totalCount: allEmails.length,
-      timeRange: "last 1 hour",
-      accounts: accounts.length,
-      searchCriteria: getLastHourReceivedQuery(),
-      timeDistribution: getTimeDistribution(allEmails),
-    });
+    res.json(allEmails.slice(0, 100));
   } catch (err) {
-    console.error("❌ Failed to fetch recent emails:", err.message);
-    res.status(500).json({
-      error: "Failed to fetch emails",
-      timeRange: "last 1 hour",
-    });
+    console.error("❌ Failed to fetch emails:", err.message);
+    res.status(500).json({ error: "Failed to fetch emails" });
   }
 });
 
-// --- Flexible time ranges (hour, day, week) ---
-app.get("/emails/:timeRange", async (req, res) => {
-  const { timeRange } = req.params;
-  let query;
-
-  switch (timeRange) {
-    case "hour":
-      query = getLastHourReceivedQuery();
-      break;
-    case "day": {
-      const oneDayAgo = new Date();
-      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-      query = `after:${oneDayAgo.getFullYear()}/${String(oneDayAgo.getMonth() + 1).padStart(2, "0")}/${String(oneDayAgo.getDate()).padStart(2, "0")}`;
-      break;
-    }
-    case "week": {
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      query = `after:${oneWeekAgo.getFullYear()}/${String(oneWeekAgo.getMonth() + 1).padStart(2, "0")}/${String(oneWeekAgo.getDate()).padStart(2, "0")}`;
-      break;
-    }
-    default:
-      return res.status(400).json({ error: "Invalid time range. Use: hour, day, or week" });
-  }
-
-  try {
-    if (accounts.length === 0) {
-      return res.json({ emails: [], message: "No authenticated accounts", timeRange });
-    }
-
-    const allEmails = [];
-
-    for (const account of accounts) {
-      oAuth2Client.setCredentials(account.tokens);
-      const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
-      const emails = await fetchEmailsWithQuery(gmail, query, account);
-      allEmails.push(...emails);
-    }
-
-    allEmails.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    res.json({
-      emails: allEmails,
-      totalCount: allEmails.length,
-      timeRange: `last ${timeRange}`,
-      accounts: accounts.length,
-      searchCriteria: query,
-    });
-  } catch (err) {
-    console.error(`❌ Failed to fetch emails for ${timeRange}:`, err.message);
-    res.status(500).json({ error: "Failed to fetch emails", timeRange });
-  }
-});
-
-// --- Health check ---
+// --- Health ---
 app.get("/health", (req, res) => {
-  res.json({
-    status: "ok",
+  res.json({ 
+    status: "ok", 
     accounts: accounts.length,
-    timestamp: new Date().toISOString(),
-    timeFilter: "last 1 hour",
+    timestamp: new Date().toISOString()
   });
 });
 
 // --- Start server ---
 app.listen(PORT, () => {
-  console.log(`🚀 Backend running on port ${PORT}`);
-  console.log(`⏰ Filtering RECEIVED emails to show only last 1 hour from ALL folders`);
+  console.log(`🚀 Backend running at https://cognitive-isabella-gmass-9839fc62.koyeb.app`);
 });
