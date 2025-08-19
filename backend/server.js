@@ -1,146 +1,156 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { motion, AnimatePresence } from "framer-motion";
-import { FiUser } from "react-icons/fi";
-import "./App.css";
+import express from "express";
+import { google } from "googleapis";
+import cors from "cors";
+import bodyParser from "body-parser";
 
-function App() {
-  const [emails, setEmails] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  
-  const BACKEND_URL = "https://cognitive-isabella-gmass-9839fc62.koyeb.app";
+const app = express();
 
-  useEffect(() => {
-    const fetchEmails = async () => {
-      try {
-        setError(null);
-        // 🚀 THE FIX IS HERE: Added a timestamp to prevent caching
-        const res = await axios.get(`${BACKEND_URL}/emails?t=${new Date().getTime()}`);
-        setEmails(res.data);
-      } catch (err) {
-        console.error("Failed to load emails:", err);
-        setError("Failed to load emails. Please check your connection.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+// CORS, body-parser, and environment variable setup... (No changes here)
+const FRONTEND_URL = "https://gmail-dashboard-ks0d3rs7t-hamzas-projects-4f002b6e.vercel.app";
+app.use(cors({ origin: FRONTEND_URL }));
+app.use(bodyParser.json());
 
-    fetchEmails();
-    const interval = setInterval(fetchEmails, 15000); // Polls every 15 seconds
-    return () => clearInterval(interval);
-  }, []);
+const PORT = process.env.PORT || 3000;
+const { CLIENT_ID, CLIENT_SECRET, REDIRECT_URI } = process.env;
 
-  // The rest of your component remains exactly the same...
-
-  const filteredEmails = emails.filter(
-    (mail) =>
-      mail.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mail.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (mail.senderName && mail.senderName.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  const groupedEmails = filteredEmails.reduce((acc, email) => {
-    const account = email.account;
-    if (!acc[account]) {
-      acc[account] = [];
-    }
-    acc[account].push(email);
-    return acc;
-  }, {});
-
-  const getLabelColor = (label) => {
-    switch (label) {
-      case "INBOX": return "var(--inbox-color)";
-      case "PROMOTIONS": return "var(--promotions-color)";
-      case "UPDATES": return "var(--updates-color)";
-      case "SOCIAL": return "var(--social-color)";
-      case "FORUMS": return "var(--forums-color)";
-      case "IMPORTANT": return "var(--important-color)";
-      case "STARRED": return "var(--starred-color)";
-      case "SENT": return "var(--sent-color)";
-      case "DRAFT": return "var(--draft-color)";
-      case "SPAM": return "var(--spam-color)";
-      default: return "var(--default-color)";
-    }
-  };
-
-  const getLabelText = (label) => {
-    switch (label) {
-      case "PROMOTIONS": return "Promotions";
-      case "UPDATES": return "Updates";
-      case "SOCIAL": return "Social";
-      case "FORUMS": return "Forums";
-      case "SPAM": return "Spam";
-      default: return label;
-    }
-  };
-
-  return (
-    <div className="gmass-dashboard">
-      <div className="content">
-        <div className="search-bar">
-          <input
-            placeholder="Search all accounts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        {error && <div className="error-message">{error}</div>}
-
-        {isLoading ? (
-          <div className="loading-indicator">Loading emails...</div>
-        ) : filteredEmails.length === 0 ? (
-          <div className="no-emails">
-            {emails.length === 0 ? "No emails found. Try authenticating first." : "No emails match your search."}
-          </div>
-        ) : (
-          <div className="accounts-container">
-            {Object.keys(groupedEmails).map((account) => (
-              <div key={account} className="account-section">
-                <div className="account-header">
-                  <FiUser className="account-icon" />
-                  <h3>{account}</h3>
-                </div>
-                <div className="emails-horizontal-scroll">
-                  <AnimatePresence>
-                    {groupedEmails[account].map((mail) => (
-                      <motion.div
-                        key={mail.id}
-                        className={`email-card-horizontal ${mail.isSpam ? 'spam' : ''} ${!mail.isRead ? 'unread' : ''}`}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3 }}
-                        layout
-                      >
-                        <div className="email-header">
-                          <div className="avatar">{(mail.senderName || mail.from).charAt(0).toUpperCase()}</div>
-                          <div className="email-label" style={{ backgroundColor: getLabelColor(mail.label) }}>{getLabelText(mail.label)}</div>
-                        </div>
-                        <div className="email-body">
-                          <div className="sender">{mail.senderName || mail.from}{mail.isSpam && <span style={{color: '#dc2626', marginLeft: '5px'}}>⚠️</span>}</div>
-                          <h3 className="subject">{mail.subject}</h3>
-                          <p className="snippet">{mail.snippet}</p>
-                        </div>
-                        <div className="email-footer">
-                          <span className="time">{new Date(mail.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                          {!mail.isRead && <span className="unread-indicator"></span>}
-                        </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
+  console.error("❌ Missing Google OAuth environment variables (CLIENT_ID, CLIENT_SECRET, REDIRECT_URI).");
+  process.exit(1);
 }
 
-export default App;```
+// Initialize OAuth2... (No changes here)
+const oAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+let accounts = [];
 
-This simple frontend change should completely solve the issue and give you the real-time updates you are looking for.
+// mapGmailLabelsToCategory and getEmailsFromAllFolders functions... (No changes here)
+const mapGmailLabelsToCategory = (labelIds) => {
+  if (!labelIds || labelIds.length === 0) return "INBOX";
+  if (labelIds.includes("SPAM")) return "SPAM";
+  if (labelIds.includes("CATEGORY_PROMOTIONS")) return "PROMOTIONS";
+  if (labelIds.includes("CATEGORY_SOCIAL")) return "SOCIAL";
+  if (labelIds.includes("CATEGORY_UPDATES")) return "UPDATES";
+  if (labelIds.includes("CATEGORY_FORUMS")) return "FORUMS";
+  if (labelIds.includes("IMPORTANT")) return "IMPORTANT";
+  if (labelIds.includes("STARRED")) return "STARRED";
+  if (labelIds.includes("SENT")) return "SENT";
+  if (labelIds.includes("DRAFT")) return "DRAFT";
+  if (labelIds.includes("INBOX")) return "INBOX";
+  return "INBOX";
+};
+
+const getEmailsFromAllFolders = async (gmail) => {
+  const query = "-in:draft -in:sent";
+  const allMessages = [];
+  try {
+    const listResponse = await gmail.users.messages.list({
+      userId: "me",
+      q: query,
+      maxResults: 30,
+    });
+    if (listResponse.data.messages) {
+      allMessages.push(...listResponse.data.messages);
+    }
+  } catch (err) {
+    console.error(`❌ Error fetching emails with query "${query}":`, err.message);
+  }
+  return allMessages;
+};
+
+// Auth endpoints... (No changes here)
+app.get("/auth", (req, res) => {
+  const url = oAuth2Client.generateAuthUrl({
+    access_type: "offline",
+    scope: ["https://www.googleapis.com/auth/gmail.readonly"],
+  });
+  res.redirect(url);
+});
+
+app.get("/auth/callback", async (req, res) => {
+  try {
+    const { code } = req.query;
+    if (!code) return res.status(400).send("❌ Missing code in query");
+    const { tokens } = await oAuth2Client.getToken(code);
+    oAuth2Client.setCredentials(tokens);
+    const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+    const profile = await gmail.users.getProfile({ userId: "me" });
+    accounts.push({ email: profile.data.emailAddress, tokens });
+    console.log(`✅ Account ${profile.data.emailAddress} connected`);
+    res.redirect(FRONTEND_URL);
+  } catch (err) {
+    console.error("❌ Auth callback error:", err.message);
+    res.status(500).send("Authentication failed");
+  }
+});
+
+// --- Emails endpoint ---
+app.get("/emails", async (req, res) => {
+  try {
+    if (accounts.length === 0) return res.json([]);
+    const allEmails = [];
+
+    for (const account of accounts) {
+      oAuth2Client.setCredentials(account.tokens);
+      const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+
+      const messages = await getEmailsFromAllFolders(gmail);
+      if (messages.length > 0) {
+        const emailPromises = messages.map(async (msg) => {
+          try {
+            const details = await gmail.users.messages.get({ userId: "me", id: msg.id, format: "full" });
+            const headers = details.data.payload.headers || [];
+            const subject = headers.find((h) => h.name === "Subject")?.value || "No Subject";
+            const from = headers.find((h) => h.name === "From")?.value || "Unknown Sender";
+            const date = headers.find((h) => h.name === "Date")?.value || new Date().toISOString();
+            const category = mapGmailLabelsToCategory(details.data.labelIds);
+            const fromMatch = from.match(/^(.+?)\s*<(.+)>$/) || from.match(/^(.+)$/);
+            const senderName = fromMatch ? fromMatch[1]?.trim().replace(/^["']|["']$/g, '') : from;
+            const senderEmail = fromMatch && fromMatch[2] ? fromMatch[2].trim() : from;
+
+            return {
+              id: details.data.id,
+              account: account.email,
+              subject,
+              from,
+              senderName,
+              senderEmail,
+              date: new Date(date).toISOString(),
+              snippet: details.data.snippet || "",
+              label: category,
+              isRead: !details.data.labelIds?.includes("UNREAD"),
+              isSpam: details.data.labelIds?.includes("SPAM"),
+            };
+          } catch (emailErr) {
+            console.error(`❌ Error processing email ${msg.id}:`, emailErr.message);
+            return null;
+          }
+        });
+
+        const emails = (await Promise.all(emailPromises)).filter(email => email !== null);
+        allEmails.push(...emails);
+      }
+
+      // =================================================================
+      // 🚀 IMPORTANT FIX: Save the potentially refreshed tokens
+      // This single line ensures that if the library got a new access token,
+      // we save it back to our accounts array for the next poll.
+      account.tokens = oAuth2Client.credentials;
+      // =================================================================
+    }
+
+    allEmails.sort((a, b) => new Date(b.date) - new Date(a.date));
+    console.log(`📧 Fetched ${allEmails.length} latest emails across ${accounts.length} accounts`);
+    res.json(allEmails);
+  } catch (err) {
+    console.error("❌ Failed to fetch emails:", err.message);
+    res.status(500).json({ error: "Failed to fetch emails" });
+  }
+});
+
+// Health and Start server... (No changes here)
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", accounts: accounts.length, timestamp: new Date().toISOString() });
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Backend running at https://cognitive-isabella-gmass-9839fc62.koyeb.app`);
+});
