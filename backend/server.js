@@ -5,7 +5,7 @@ import bodyParser from "body-parser";
 
 const app = express();
 
-// CORS, body-parser, and environment variable setup... (No changes here)
+// ⚡ CORS - allow your Vercel frontend
 const FRONTEND_URL = "https://gmail-dashboard.vercel.app";
 app.use(cors({ origin: FRONTEND_URL }));
 app.use(bodyParser.json());
@@ -18,13 +18,14 @@ if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
   process.exit(1);
 }
 
-// Initialize OAuth2... (No changes here)
+// Initialize OAuth2
 const oAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
 let accounts = [];
 
-// mapGmailLabelsToCategory and getEmailsFromAllFolders functions... (No changes here)
+// Label mapping function
 const mapGmailLabelsToCategory = (labelIds) => {
   if (!labelIds || labelIds.length === 0) return "INBOX";
+  
   if (labelIds.includes("SPAM")) return "SPAM";
   if (labelIds.includes("CATEGORY_PROMOTIONS")) return "PROMOTIONS";
   if (labelIds.includes("CATEGORY_SOCIAL")) return "SOCIAL";
@@ -35,28 +36,36 @@ const mapGmailLabelsToCategory = (labelIds) => {
   if (labelIds.includes("SENT")) return "SENT";
   if (labelIds.includes("DRAFT")) return "DRAFT";
   if (labelIds.includes("INBOX")) return "INBOX";
+  
   return "INBOX";
 };
 
+// Function to get the latest received emails, including spam
 const getEmailsFromAllFolders = async (gmail) => {
-  const query = "-in:draft -in:sent";
+  // This "whitelist" query is precise: it fetches emails that are in the inbox, spam, or any
+  // of the main categories. This correctly excludes sent mail and drafts.
+  const query = "{in:inbox in:spam category:promotions category:social category:updates category:forums}";
+  
   const allMessages = [];
+  
   try {
     const listResponse = await gmail.users.messages.list({
       userId: "me",
       q: query,
-      maxResults: 30,
+      maxResults: 30, // Fetches the 30 most recent emails matching the query
     });
+    
     if (listResponse.data.messages) {
       allMessages.push(...listResponse.data.messages);
     }
   } catch (err) {
     console.error(`❌ Error fetching emails with query "${query}":`, err.message);
   }
+  
   return allMessages;
 };
 
-// Auth endpoints... (No changes here)
+// --- Auth endpoints ---
 app.get("/auth", (req, res) => {
   const url = oAuth2Client.generateAuthUrl({
     access_type: "offline",
@@ -69,12 +78,21 @@ app.get("/auth/callback", async (req, res) => {
   try {
     const { code } = req.query;
     if (!code) return res.status(400).send("❌ Missing code in query");
+
     const { tokens } = await oAuth2Client.getToken(code);
     oAuth2Client.setCredentials(tokens);
+
     const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
     const profile = await gmail.users.getProfile({ userId: "me" });
-    accounts.push({ email: profile.data.emailAddress, tokens });
-    console.log(`✅ Account ${profile.data.emailAddress} connected`);
+
+    // Avoid adding duplicate accounts
+    if (!accounts.find(acc => acc.email === profile.data.emailAddress)) {
+      accounts.push({ email: profile.data.emailAddress, tokens });
+      console.log(`✅ Account ${profile.data.emailAddress} connected`);
+    } else {
+      console.log(`ℹ️ Account ${profile.data.emailAddress} already connected`);
+    }
+    
     res.redirect(FRONTEND_URL);
   } catch (err) {
     console.error("❌ Auth callback error:", err.message);
@@ -86,6 +104,7 @@ app.get("/auth/callback", async (req, res) => {
 app.get("/emails", async (req, res) => {
   try {
     if (accounts.length === 0) return res.json([]);
+
     const allEmails = [];
 
     for (const account of accounts) {
@@ -93,6 +112,7 @@ app.get("/emails", async (req, res) => {
       const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
 
       const messages = await getEmailsFromAllFolders(gmail);
+      
       if (messages.length > 0) {
         const emailPromises = messages.map(async (msg) => {
           try {
@@ -128,13 +148,9 @@ app.get("/emails", async (req, res) => {
         const emails = (await Promise.all(emailPromises)).filter(email => email !== null);
         allEmails.push(...emails);
       }
-
-      // =================================================================
-      // 🚀 IMPORTANT FIX: Save the potentially refreshed tokens
-      // This single line ensures that if the library got a new access token,
-      // we save it back to our accounts array for the next poll.
+      
+      // IMPORTANT FIX: Save the potentially refreshed tokens for the next poll
       account.tokens = oAuth2Client.credentials;
-      // =================================================================
     }
 
     allEmails.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -146,11 +162,12 @@ app.get("/emails", async (req, res) => {
   }
 });
 
-// Health and Start server... (No changes here)
+// --- Health ---
 app.get("/health", (req, res) => {
   res.json({ status: "ok", accounts: accounts.length, timestamp: new Date().toISOString() });
 });
 
+// --- Start server ---
 app.listen(PORT, () => {
   console.log(`🚀 Backend running at https://cognitive-isabella-gmass-9839fc62.koyeb.app`);
 });
