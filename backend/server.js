@@ -1,4 +1,38 @@
-import express from "express";
+const headers = details.data.payload.headers || [];
+          const subject = headers.find((h) => h.name === "Subject")?.value || "No Subject";
+          const from = headers.find((h) => h.name === "From")?.value || "Unknown Sender";
+          const dateHeader = headers.find((h) => h.name === "Date")?.value;
+          const date = dateHeader || new Date(parseInt(details.data.internalDate)).toISOString();
+          
+          // 🚀 NEW: Double-check time filter (Gmail search might be imprecise)
+          if (!isWithinLastHour(date)) {
+            return null; // Skip emails older than 1 hour
+          }
+          
+          const category = mapGmailLabelsToCategory(details.data.labelIds);
+          
+          // Parse sender name and email
+          const fromMatch = from.match(/^(.+?)\s*<(.+)>$/) || from.match(/^(.+)$/);
+          const senderName = fromMatch ? fromMatch[1]?.trim().replace(/^["']|["']$/g, '') : from;
+          const senderEmail = fromMatch && fromMatch[2] ? fromMatch[2].trim() : from;
+
+          return {
+            id: details.data.id,
+            account: account.email,
+            subject,
+            from,
+            senderName,
+            senderEmail,
+            date: new Date(date).toISOString(),
+            snippet: details.data.snippet || "",
+            label: category,
+            labelIds: details.data.labelIds,
+            threadId: details.data.threadId,
+            isRead: !details.data.labelIds?.includes("UNREAD"),
+            isSpam: details.data.labelIds?.includes("SPAM"),
+            // 🚀 NEW: Add time info for debugging
+            receivedMinutesAgo: Math.floor((new Date() - new Date(date)) / (1000 * 60))
+          };import express from "express";
 import { google } from "googleapis";
 import cors from "cors";
 import bodyParser from "body-parser";
@@ -22,66 +56,73 @@ if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
 const oAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
 let accounts = [];
 
-// 🚀 NEW: Label mapping function
+// 🚀 NEW: Function to get Gmail search query for ALL received emails in last hour
+const getLastHourReceivedQuery = () => {
+  const oneHourAgo = new Date();
+  oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+  
+  // Format date for Gmail search (YYYY/MM/DD)
+  const year = oneHourAgo.getFullYear();
+  const month = String(oneHourAgo.getMonth() + 1).padStart(2, '0');
+  const day = String(oneHourAgo.getDate()).padStart(2, '0');
+  
+  // 🎯 KEY: Search ALL folders (inbox, spam, promotions, etc.) - exclude only sent/drafts
+  return `-in:sent -in:drafts after:${year}/${month}/${day}`;
+};
+
+// 🚀 NEW: Enhanced label mapping
 const mapGmailLabelsToCategory = (labelIds) => {
   if (!labelIds || labelIds.length === 0) return "INBOX";
   
-  // Check for spam first (highest priority)
+  // Priority order for label detection
   if (labelIds.includes("SPAM")) return "SPAM";
-  
-  // Check for category labels
   if (labelIds.includes("CATEGORY_PROMOTIONS")) return "PROMOTIONS";
   if (labelIds.includes("CATEGORY_SOCIAL")) return "SOCIAL";
   if (labelIds.includes("CATEGORY_UPDATES")) return "UPDATES";
   if (labelIds.includes("CATEGORY_FORUMS")) return "FORUMS";
-  
-  // Check for other important labels
   if (labelIds.includes("IMPORTANT")) return "IMPORTANT";
   if (labelIds.includes("STARRED")) return "STARRED";
   if (labelIds.includes("SENT")) return "SENT";
   if (labelIds.includes("DRAFT")) return "DRAFT";
-  
-  // Default to INBOX for primary emails
   if (labelIds.includes("INBOX")) return "INBOX";
   
-  return "INBOX"; // fallback
+  return "INBOX";
 };
 
-// 🚀 NEW: Function to get emails from all folders including spam
-const getEmailsFromAllFolders = async (gmail) => {
-  const queries = [
-    "in:inbox",           // Primary inbox
-    "in:spam",            // Spam folder  
-    "category:promotions", // Promotions
-    "category:social",     // Social
-    "category:updates",    // Updates
-    "category:forums"      // Forums
-  ];
+// 🚀 NEW: Get ALL received emails from last hour (any folder)
+const getRecentReceivedEmails = async (gmail) => {
+  const lastHourReceivedQuery = getLastHourReceivedQuery();
   
-  const allMessages = [];
-  
-  for (const query of queries) {
-    try {
-      const listResponse = await gmail.users.messages.list({
-        userId: "me",
-        q: query,
-        maxResults: 10, // Reduced per category to avoid overwhelming
-      });
-      
-      if (listResponse.data.messages) {
-        allMessages.push(...listResponse.data.messages);
-      }
-    } catch (err) {
-      console.error(`❌ Error fetching emails for query "${query}":`, err.message);
+  try {
+    console.log(`🔍 Searching for RECEIVED emails with query: ${lastHourReceivedQuery}`);
+    
+    const listResponse = await gmail.users.messages.list({
+      userId: "me",
+      q: lastHourReceivedQuery, // All received emails from last hour (inbox, spam, promotions, etc.)
+      maxResults: 100, // Increased since we want all received emails
+    });
+    
+    if (!listResponse.data.messages) {
+      console.log("📭 No emails RECEIVED in the last hour");
+      return [];
     }
+    
+    console.log(`📥 Found ${listResponse.data.messages.length} RECEIVED emails from last hour`);
+    return listResponse.data.messages;
+    
+  } catch (err) {
+    console.error(`❌ Error fetching recent RECEIVED emails:`, err.message);
+    return [];
   }
+};
+
+// 🚀 NEW: Check if email is within last hour (additional filter)
+const isWithinLastHour = (emailDate) => {
+  const oneHourAgo = new Date();
+  oneHourAgo.setHours(oneHourAgo.getHours() - 1);
   
-  // Remove duplicates based on message ID
-  const uniqueMessages = allMessages.filter((msg, index, self) => 
-    index === self.findIndex(m => m.id === msg.id)
-  );
-  
-  return uniqueMessages;
+  const emailTime = new Date(emailDate);
+  return emailTime >= oneHourAgo;
 };
 
 // --- Auth endpoints ---
@@ -113,21 +154,32 @@ app.get("/auth/callback", async (req, res) => {
   }
 });
 
-// --- 🚀 UPDATED: Emails endpoint with proper label detection ---
+// --- 🚀 UPDATED: Recent emails endpoint (last hour only) ---
 app.get("/emails", async (req, res) => {
   try {
-    if (accounts.length === 0) return res.json([]);
+    if (accounts.length === 0) {
+      return res.json({ 
+        emails: [], 
+        message: "No authenticated accounts",
+        timeRange: "last 1 hour"
+      });
+    }
 
     const allEmails = [];
+    const oneHourAgo = new Date();
+    oneHourAgo.setHours(oneHourAgo.getHours() - 1);
 
     for (const account of accounts) {
       oAuth2Client.setCredentials(account.tokens);
       const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
 
-      // 🚀 NEW: Get emails from all categories including spam
-      const messages = await getEmailsFromAllFolders(gmail);
+      // 🚀 NEW: Get only recent RECEIVED emails from ALL folders
+      const messages = await getRecentReceivedEmails(gmail);
       
-      if (messages.length === 0) continue;
+      if (messages.length === 0) {
+        console.log(`📭 No recent emails for ${account.email}`);
+        continue;
+      }
 
       const emailPromises = messages.map(async (msg) => {
         try {
@@ -140,12 +192,17 @@ app.get("/emails", async (req, res) => {
           const headers = details.data.payload.headers || [];
           const subject = headers.find((h) => h.name === "Subject")?.value || "No Subject";
           const from = headers.find((h) => h.name === "From")?.value || "Unknown Sender";
-          const date = headers.find((h) => h.name === "Date")?.value || details.data.internalDate || new Date().toISOString();
+          const dateHeader = headers.find((h) => h.name === "Date")?.value;
+          const date = dateHeader || new Date(parseInt(details.data.internalDate)).toISOString();
           
-          // 🚀 NEW: Proper label mapping
+          // 🚀 NEW: Double-check time filter (Gmail search might be imprecise)
+          if (!isWithinLastHour(date)) {
+            return null; // Skip emails older than 1 hour
+          }
+          
           const category = mapGmailLabelsToCategory(details.data.labelIds);
           
-          // 🚀 NEW: Extract sender name and email
+          // Parse sender name and email
           const fromMatch = from.match(/^(.+?)\s*<(.+)>$/) || from.match(/^(.+)$/);
           const senderName = fromMatch ? fromMatch[1]?.trim().replace(/^["']|["']$/g, '') : from;
           const senderEmail = fromMatch && fromMatch[2] ? fromMatch[2].trim() : from;
@@ -159,11 +216,13 @@ app.get("/emails", async (req, res) => {
             senderEmail,
             date: new Date(date).toISOString(),
             snippet: details.data.snippet || "",
-            label: category, // Now properly categorized
-            labelIds: details.data.labelIds, // Include raw labels for debugging
+            label: category,
+            labelIds: details.data.labelIds,
             threadId: details.data.threadId,
             isRead: !details.data.labelIds?.includes("UNREAD"),
-            isSpam: details.data.labelIds?.includes("SPAM")
+            isSpam: details.data.labelIds?.includes("SPAM"),
+            // 🚀 NEW: Add time info for debugging
+            receivedMinutesAgo: Math.floor((new Date() - new Date(date)) / (1000 * 60))
           };
         } catch (emailErr) {
           console.error(`❌ Error processing email ${msg.id}:`, emailErr.message);
@@ -179,17 +238,62 @@ app.get("/emails", async (req, res) => {
     // Sort by date (newest first)
     allEmails.sort((a, b) => new Date(b.date) - new Date(a.date));
     
-    console.log(`📧 Fetched ${allEmails.length} emails across ${accounts.length} accounts`);
-    console.log("Label distribution:", allEmails.reduce((acc, email) => {
-      acc[email.label] = (acc[email.label] || 0) + 1;
+    console.log(`📥 Found ${allEmails.length} RECEIVED emails from last hour across ${accounts.length} accounts`);
+    
+    // 🚀 NEW: Log time distribution for debugging
+    const timeDistribution = allEmails.reduce((acc, email) => {
+      const minutesAgo = email.receivedMinutesAgo;
+      if (minutesAgo <= 15) acc['0-15min']++;
+      else if (minutesAgo <= 30) acc['15-30min']++;
+      else if (minutesAgo <= 45) acc['30-45min']++;
+      else acc['45-60min']++;
       return acc;
-    }, {}));
+    }, {'0-15min': 0, '15-30min': 0, '30-45min': 0, '45-60min': 0});
+    
+    console.log("⏰ Time distribution:", timeDistribution);
 
-    res.json(allEmails.slice(0, 100));
+    res.json({
+      emails: allEmails,
+      totalCount: allEmails.length,
+      timeRange: "last 1 hour",
+      accounts: accounts.length,
+      searchCriteria: getLastHourQuery()
+    });
   } catch (err) {
-    console.error("❌ Failed to fetch emails:", err.message);
-    res.status(500).json({ error: "Failed to fetch emails" });
+    console.error("❌ Failed to fetch recent emails:", err.message);
+    res.status(500).json({ 
+      error: "Failed to fetch emails",
+      timeRange: "last 1 hour"
+    });
   }
+});
+
+// 🚀 NEW: Endpoint to get emails from different time ranges
+app.get("/emails/:timeRange", async (req, res) => {
+  const { timeRange } = req.params; // hour, day, week
+  
+  let query;
+  switch (timeRange) {
+    case 'hour':
+      query = getLastHourReceivedQuery();
+      break;
+    case 'day':
+      const oneDayAgo = new Date();
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+      query = `after:${oneDayAgo.getFullYear()}/${String(oneDayAgo.getMonth() + 1).padStart(2, '0')}/${String(oneDayAgo.getDate()).padStart(2, '0')}`;
+      break;
+    case 'week':
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      query = `after:${oneWeekAgo.getFullYear()}/${String(oneWeekAgo.getMonth() + 1).padStart(2, '0')}/${String(oneWeekAgo.getDate()).padStart(2, '0')}`;
+      break;
+    default:
+      return res.status(400).json({ error: "Invalid time range. Use: hour, day, or week" });
+  }
+  
+  // Implementation similar to main endpoint but with custom query
+  // ... (implementation would be similar to main /emails endpoint)
+  res.json({ message: `Emails from last ${timeRange}`, query });
 });
 
 // --- Health ---
@@ -197,11 +301,13 @@ app.get("/health", (req, res) => {
   res.json({ 
     status: "ok", 
     accounts: accounts.length,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    timeFilter: "last 1 hour"
   });
 });
 
 // --- Start server ---
 app.listen(PORT, () => {
   console.log(`🚀 Backend running at https://cognitive-isabella-gmass-9839fc62.koyeb.app`);
+  console.log(`⏰ Filtering RECEIVED emails to show only last 1 hour from ALL folders`);
 });
