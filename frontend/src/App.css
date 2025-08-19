@@ -20,6 +20,46 @@
   --border-color: #e5e7eb;
   --primary-blue: #2563eb;
 }
+/* Add these new styles to your existing App.css file */
+
+.account-section {
+  /* Add some space between each account's row */
+  margin-bottom: 40px; 
+}
+
+.account-header {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Space between icon and text */
+  margin-bottom: 15px;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
+.account-icon {
+  font-size: 1.2rem;
+  color: var(--primary-blue);
+}
+
+.error-message {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+
+.unread-indicator {
+  margin-left: 10px;
+  width: 8px;
+  height: 8px;
+  background-color: var(--primary-blue);
+  border-radius: 50%;
+  display: inline-block;
+}
 
 /* NEW: Spam email styling */
 .email-card-horizontal.spam {
