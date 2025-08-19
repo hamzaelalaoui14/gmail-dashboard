@@ -16,7 +16,7 @@ function App() {
     const fetchEmails = async () => {
       try {
         setError(null);
-        // 🚀 THE FIX IS HERE: Added a timestamp to prevent caching
+        // Add a timestamp to the URL to prevent browser/CDN caching
         const res = await axios.get(`${BACKEND_URL}/emails?t=${new Date().getTime()}`);
         setEmails(res.data);
       } catch (err) {
@@ -27,12 +27,10 @@ function App() {
       }
     };
 
-    fetchEmails();
-    const interval = setInterval(fetchEmails, 15000); // Polls every 15 seconds
-    return () => clearInterval(interval);
+    fetchEmails(); // Fetch immediately on load
+    const interval = setInterval(fetchEmails, 15000); // Poll every 15 seconds for updates
+    return () => clearInterval(interval); // Cleanup on component unmount
   }, []);
-
-  // The rest of your component remains exactly the same...
 
   const filteredEmails = emails.filter(
     (mail) =>
@@ -41,6 +39,7 @@ function App() {
       (mail.senderName && mail.senderName.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  // Group the filtered emails by account for separate row rendering
   const groupedEmails = filteredEmails.reduce((acc, email) => {
     const account = email.account;
     if (!acc[account]) {
@@ -67,14 +66,8 @@ function App() {
   };
 
   const getLabelText = (label) => {
-    switch (label) {
-      case "PROMOTIONS": return "Promotions";
-      case "UPDATES": return "Updates";
-      case "SOCIAL": return "Social";
-      case "FORUMS": return "Forums";
-      case "SPAM": return "Spam";
-      default: return label;
-    }
+    if (!label) return "Inbox";
+    return label.charAt(0) + label.slice(1).toLowerCase();
   };
 
   return (
@@ -94,7 +87,7 @@ function App() {
           <div className="loading-indicator">Loading emails...</div>
         ) : filteredEmails.length === 0 ? (
           <div className="no-emails">
-            {emails.length === 0 ? "No emails found. Try authenticating first." : "No emails match your search."}
+            {emails.length === 0 ? "No emails found. Try authenticating an account first." : "No emails match your search."}
           </div>
         ) : (
           <div className="accounts-container">
@@ -110,8 +103,8 @@ function App() {
                       <motion.div
                         key={mail.id}
                         className={`email-card-horizontal ${mail.isSpam ? 'spam' : ''} ${!mail.isRead ? 'unread' : ''}`}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.3 }}
                         layout
                       >
@@ -120,7 +113,7 @@ function App() {
                           <div className="email-label" style={{ backgroundColor: getLabelColor(mail.label) }}>{getLabelText(mail.label)}</div>
                         </div>
                         <div className="email-body">
-                          <div className="sender">{mail.senderName || mail.from}{mail.isSpam && <span style={{color: '#dc2626', marginLeft: '5px'}}>⚠️</span>}</div>
+                          <div className="sender">{mail.senderName || mail.from}{mail.isSpam && <span className="spam-warning">⚠️</span>}</div>
                           <h3 className="subject">{mail.subject}</h3>
                           <p className="snippet">{mail.snippet}</p>
                         </div>
@@ -141,6 +134,4 @@ function App() {
   );
 }
 
-export default App;```
-
-This simple frontend change should completely solve the issue and give you the real-time updates you are looking for.
+export default App;
