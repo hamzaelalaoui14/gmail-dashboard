@@ -6,7 +6,7 @@ import bodyParser from "body-parser";
 const app = express();
 
 // ⚡ CORS - allow your Vercel frontend
-const FRONTEND_URL = "https://gmail-dashboard-ks0d3rs7t-hamzas-projects-4f002b6e.vercel.app";
+const FRONTEND_URL = "https://gmail-dashboard.vercel.app";
 app.use(cors({ origin: FRONTEND_URL }));
 app.use(bodyParser.json());
 
