@@ -4,224 +4,25 @@
   --promotions-color: #e9dcf8;
   --updates-color: #fef3d0;
   --social-color: #d1e7f7;
-  --forums-color: #f0f9e8; /* NEW: Forums color */
-  --spam-color: #fee2e2; /* NEW: Spam color (light red) */
-  --important-color: #fed7aa; /* Orange for important */
-  --starred-color: #fef08a; /* Yellow for starred */
-  --sent-color: #e0e7ff; /* Light blue for sent */
-  --draft-color: #f3f4f6; /* Gray for drafts */
+  --forums-color: #f0f9e8;
+  --spam-color: #fee2e2;
+  --important-color: #fed7aa;
+  --starred-color: #fef08a;
+  --sent-color: #e0e7ff;
+  --draft-color: #f3f4f6;
   --default-color: #e5e7eb;
+  
   --primary-bg: #f5f7fa;
-  --sidebar-bg: #ffffff;
   --card-bg: #ffffff;
   --text-primary: #333333;
   --text-secondary: #6b7280;
   --text-muted: #9ca3af;
   --border-color: #e5e7eb;
   --primary-blue: #2563eb;
-}
-/* Add these new styles to your existing App.css file */
-
-.account-section {
-  /* Add some space between each account's row */
-  margin-bottom: 40px; 
+  --spam-red: #ef4444;
 }
 
-.account-header {
-  display: flex;
-  align-items: center;
-  gap: 10px; /* Space between icon and text */
-  margin-bottom: 15px;
-  color: var(--text-primary);
-  font-size: 1.1rem;
-  font-weight: 600;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 10px;
-}
-
-.account-icon {
-  font-size: 1.2rem;
-  color: var(--primary-blue);
-}
-
-.error-message {
-  background: #fee2e2;
-  color: #dc2626;
-  padding: 10px;
-  border-radius: 5px;
-  margin-bottom: 20px;
-}
-
-.unread-indicator {
-  margin-left: 10px;
-  width: 8px;
-  height: 8px;
-  background-color: var(--primary-blue);
-  border-radius: 50%;
-  display: inline-block;
-}
-
-/* NEW: Spam email styling */
-.email-card-horizontal.spam {
-  border-left: 4px solid #ef4444;
-  opacity: 0.8;
-}
-
-.email-card-horizontal.spam .email-label {
-  background-color: var(--spam-color) !important;
-  color: #dc2626 !important;
-  font-weight: bold;
-}
-
-/* NEW: Unread email emphasis */
-.email-card-horizontal.unread {
-  border-left: 3px solid var(--primary-blue);
-  background-color: #fafbff;
-}
-
-.email-card-horizontal.unread .subject {
-  font-weight: 700;
-}
-
-/* Rest of your existing CSS... */
-.time-ago {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-.gmass-dashboard {
-  padding: 20px;
-  font-family: Arial, sans-serif;
-}
-
-.search-bar input {
-  width: 100%;
-  padding: 8px;
-  margin-bottom: 20px;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-}
-
-.accounts-container {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-}
-
-.account-section {
-  display: flex;
-  flex-direction: column;
-}
-
-.account-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.account-icon {
-  margin-right: 10px;
-}
-
-.scroll-controls {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.scroll-button {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 1.2rem;
-}
-
-.emails-horizontal-scroll {
-  display: flex;
-  overflow-x: auto;
-  gap: 10px;
-  flex-grow: 1;
-  padding: 10px 0;
-}
-
-.email-card-horizontal {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-width: 250px;
-  max-width: 300px;
-  max-height: 500px;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: #fff;
-}
-
-.email-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.avatar {
-  width: 35px;
-  height: 35px;
-  border-radius: 50%;
-  background-color: #007bff;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-}
-
-.email-label {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  color: #fff;
-}
-
-.email-body {
-  flex-grow: 1;
-  overflow: auto;
-  margin-top: 5px;
-}
-
-.sender-name {
-  font-weight: bold;
-}
-
-.sender-email {
-  font-size: 0.85rem;
-  color: #555;
-}
-
-.subject {
-  margin-top: 5px;
-  font-size: 1rem;
-  font-weight: 500;
-  white-space: normal;
-  word-wrap: break-word;
-  overflow: visible;
-}
-
-.email-footer {
-  margin-top: auto;
-  flex-shrink: 0;
-  font-size: 0.85rem;
-  color: #666;
-  padding-top: 5px;
-}
-
-.snippet {
-  white-space: normal;
-  overflow-wrap: break-word;
-}
-
-/* Keep all your existing CSS styles */
-
+/* --- Global Styles & Resets --- */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -231,8 +32,10 @@
 body {
   font-family: 'Segoe UI', Roboto, sans-serif;
   background-color: var(--primary-bg);
+  color: var(--text-primary);
 }
 
+/* --- Main Layout --- */
 .gmass-dashboard {
   display: flex;
   min-height: 100vh;
@@ -240,119 +43,120 @@ body {
 
 .content {
   flex: 1;
-  padding: 20px;
+  padding: 25px;
   background-color: var(--primary-bg);
 }
 
+/* --- Search & Status Messages --- */
 .search-bar {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
 }
 
 .search-bar input {
   width: 100%;
-  padding: 10px 15px;
+  padding: 12px 18px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 1rem;
   outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .search-bar input:focus {
   border-color: var(--primary-blue);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+.loading-indicator, .no-emails {
+  text-align: center;
+  padding: 50px;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+.error-message {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+/* --- Account Sections --- */
 .accounts-container {
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 20px;
 }
 
 .account-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  margin-bottom: 30px;
 }
 
 .account-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 1.1rem;
+  gap: 12px;
+  margin-bottom: 15px;
   color: var(--text-primary);
-  padding: 5px 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
 }
 
-.scroll-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.account-icon {
+  font-size: 1.3rem;
+  color: var(--primary-blue);
 }
 
-.scroll-button {
-  background: var(--primary-blue);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.scroll-button:hover {
-  background: #1d4ed8;
-}
-
-.scroll-button:disabled {
-  background: #93c5fd;
-  cursor: not-allowed;
-}
-
+/* --- Horizontal Email Scroll --- */
 .emails-horizontal-scroll {
   display: flex;
   overflow-x: auto;
   gap: 15px;
-  padding: 10px 0;
+  padding: 15px 5px;
   scrollbar-width: thin;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
-  flex: 1;
 }
 
 .emails-horizontal-scroll::-webkit-scrollbar {
-  height: 6px;
+  height: 8px;
 }
 
 .emails-horizontal-scroll::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
+/* --- Email Card Styling --- */
 .email-card-horizontal {
-  min-width: 280px;
-  max-width: 280px;
-  height: 200px;
+  min-width: 300px;
+  max-width: 300px;
+  height: 220px;
   background: var(--card-bg);
-  border-radius: 8px;
-  padding: 15px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+  border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  gap: 10px;
   scroll-snap-align: start;
   flex-shrink: 0;
   overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.email-card-horizontal:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px rgba(0,0,0,0.1);
 }
 
 .email-header {
   display: flex;
-  align-items: flex-start;
-  margin-bottom: 12px;
-  position: relative;
+  align-items: center;
+  margin-bottom: 15px;
 }
 
 .avatar {
@@ -366,19 +170,41 @@ body {
   justify-content: center;
   font-weight: bold;
   margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.email-label {
+  margin-left: auto;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.email-body {
+  flex-grow: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .sender {
   font-weight: 600;
-  margin-bottom: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 1rem;
+}
+
+.spam-warning {
+  color: var(--spam-red);
+  margin-left: 5px;
 }
 
 .subject {
-  font-weight: 600;
-  margin-bottom: 8px;
+  font-weight: 500;
+  margin-top: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -386,7 +212,8 @@ body {
 
 .snippet {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 0.875rem;
+  margin-top: 8px;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -394,35 +221,46 @@ body {
   flex-grow: 1;
 }
 
-.email-label {
-  position: absolute;
-  right: 0;
-  top: 0;
-  font-size: 12px;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-weight: 500;
-}
-
 .email-footer {
   margin-top: auto;
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  padding-top: 10px;
 }
 
 .time {
-  font-size: 12px;
+  font-size: 0.8rem;
   color: var(--text-muted);
 }
 
-.loading-indicator {
-  text-align: center;
-  padding: 40px;
-  color: var(--text-secondary);
+/* --- Special Email States --- */
+.email-card-horizontal.spam {
+  border-left: 4px solid var(--spam-red);
+  opacity: 0.85;
 }
 
-/* Animation styles */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.email-card-horizontal.spam .email-label {
+  background-color: var(--spam-color) !important;
+  color: var(--spam-red) !important;
+}
+
+.email-card-horizontal.unread {
+  border-left: 4px solid var(--primary-blue);
+  background-color: #fcfdff;
+}
+
+.email-card-horizontal.unread .sender,
+.email-card-horizontal.unread .subject {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.unread-indicator {
+  margin-left: 10px;
+  width: 8px;
+  height: 8px;
+  background-color: var(--primary-blue);
+  border-radius: 50%;
+  display: inline-block;
 }
