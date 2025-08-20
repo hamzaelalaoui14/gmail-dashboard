@@ -1,8 +1,36 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
-import { motion, AnimatePresence } from "framer-motion";
-import { FiUser, FiChevronLeft, FiChevronRight, FiCopy } from "react-icons/fi";
+import { AnimatePresence, motion } from "framer-motion";
+import { FiCopy } from "react-icons/fi";
 import "./App.css";
+
+// You can download the Gmail logo and place it in src/ or use this URL
+const GMAIL_LOGO_URL = "https://ssl.gstatic.com/ui/v1/icons/mail/rfr/logo_gmail_lockup_default_1x_r5.png";
+
+// --- NEW: Time formatting function ---
+function formatTimeAgo(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.round((now - date) / 1000);
+
+  if (seconds < 60) {
+    return `${seconds} seconds ago`;
+  }
+
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) {
+    return `${minutes} minutes ago`;
+  }
+
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) {
+    return `${hours} hours ago`;
+  }
+
+  const days = Math.round(hours / 24);
+  return `${days} days ago`;
+}
+
 
 function App() {
   const [emails, setEmails] = useState([]);
@@ -10,8 +38,6 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isCopied, setIsCopied] = useState(false);
-
-  const scrollRefs = useRef({});
 
   const BACKEND_URL = "https://cognitive-isabella-gmass-9839fc62.koyeb.app";
 
@@ -59,39 +85,27 @@ function App() {
       setTimeout(() => setIsCopied(false), 2000);
     });
   };
-
-  const handleScroll = (account, direction) => {
-    const element = scrollRefs.current[account];
-    if (element) {
-      const scrollAmount = direction === 'left' ? -315 : 315;
-      element.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
-  };
   
-  const getCardClass = (label) => {
+  // --- NEW: Class getters for the new design ---
+  const getEmailBlockClass = (label) => {
     switch (label) {
-      case "INBOX": return "card-inbox";
-      case "PROMOTIONS": return "card-promotions";
-      case "UPDATES": return "card-updates";
-      case "FORUMS": return "card-forums";
-      case "SPAM": return "card-spam";
-      default: return "";
+      case "INBOX": return "email-inbox";
+      case "PROMOTIONS": return "email-promotions";
+      case "UPDATES": return "email-updates";
+      case "FORUMS": return "email-forums";
+      case "SPAM": return "email-spam";
+      default: return "email-default";
     }
   };
 
-  const getLabelColor = (label) => {
+  const getLabelClass = (label) => {
     switch (label) {
-      case "INBOX": return "var(--inbox-color)";
-      case "PROMOTIONS": return "var(--promotions-color)";
-      case "UPDATES": return "var(--updates-color)";
-      case "SOCIAL": return "var(--social-color)";
-      case "FORUMS": return "var(--forums-color)";
-      case "IMPORTANT": return "var(--important-color)";
-      case "STARRED": return "var(--starred-color)";
-      case "SENT": return "var(--sent-color)";
-      case "DRAFT": return "var(--draft-color)";
-      case "SPAM": return "var(--spam-color)";
-      default: return "var(--default-color)";
+        case "INBOX": return "label-inbox";
+        case "PROMOTIONS": return "label-promotions";
+        case "UPDATES": return "label-updates";
+        case "FORUMS": return "label-forums";
+        case "SPAM": return "label-spam";
+        default: return "label-default";
     }
   };
 
@@ -101,8 +115,9 @@ function App() {
   };
 
   return (
-    <div className="gmass-dashboard">
-      <div className="content">
+    <div className="dashboard-container">
+      {/* Search and Copy section are kept as requested previously */}
+      <div className="top-section">
         <div className="search-bar">
           <input
             placeholder="Search all accounts..."
@@ -110,73 +125,75 @@ function App() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        
         {accountsList.length > 0 && (
           <div className="copy-accounts-section">
-            <h4>1. Start the Free Email Tester by Sending Your Campaign to These Addresses:</h4>
+            <p>1. Start the Free Email Tester by Sending Your Campaign to These Addresses:</p>
             <div className="copy-box">
-              <span className="copy-text">{accountsList.join(';')}</span>
+              <code className="copy-text">{accountsList.join(';')}</code>
               <button onClick={handleCopy} className="copy-button">
-                {isCopied ? "Copied!" : "Copy these addresses to clipboard"}
+                {isCopied ? "Copied!" : <FiCopy />}
               </button>
             </div>
-            <h4>2. Watch Your Deliverability Test in Real Time as Your Emails Land in the Accounts Below:</h4>
+            <p>2. Watch Your Deliverability Test in Real Time as Your Emails Land in the Accounts Below:</p>
           </div>
         )}
+      </div>
 
+      <div className="main-content">
         {error && <div className="error-message">{error}</div>}
-
         {isLoading ? (
           <div className="loading-indicator">Loading emails...</div>
-        ) : filteredEmails.length === 0 ? (
-          <div className="no-emails">
-            {emails.length === 0 ? "No emails found. Try authenticating an account first." : "No emails match your search."}
-          </div>
         ) : (
           <div className="accounts-container">
             {accountsList.map((account) => (
-              <div key={account} className="account-section">
-                <div className="account-header">
-                  <FiUser className="account-icon" />
-                  <h3>{account}</h3>
+              <div key={account} className="account-row">
+                {/* --- NEW: Account Info Block --- */}
+                <div className="account-info">
+                  <img src={GMAIL_LOGO_URL} alt="Gmail Logo" className="gmail-logo"/>
+                  <p className="account-email">{account}</p>
+                  <p className="account-desc">10-year-old Gmail account</p>
                 </div>
-                <div className="scroll-wrapper">
-                  <button className="scroll-arrow left" onClick={() => handleScroll(account, 'left')} aria-label="Scroll left"><FiChevronLeft /></button>
-                  <div 
-                    className="emails-horizontal-scroll" 
-                    ref={el => scrollRefs.current[account] = el}
-                  >
-                    <AnimatePresence>
-                      {groupedEmails[account].map((mail) => (
-                        <motion.div
-                          key={mail.id}
-                          className={`email-card-horizontal ${getCardClass(mail.label)} ${mail.isSpam ? 'spam' : ''} ${!mail.isRead ? 'unread' : ''}`}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.3 }}
-                          layout
-                        >
-                          <div className="email-header">
-                            <div className="avatar">{(mail.senderName || mail.from).charAt(0).toUpperCase()}</div>
-                            <div className="email-label" style={{ backgroundColor: getLabelColor(mail.label) }}>{getLabelText(mail.label)}</div>
+
+                {/* --- NEW: Horizontally Scrolling Emails Container --- */}
+                <div className="emails-scroll-container">
+                  <AnimatePresence>
+                    {groupedEmails[account].map((mail) => (
+                      <motion.div
+                        key={mail.id}
+                        className={`email-block ${getEmailBlockClass(mail.label)}`}
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: 280 }}
+                        exit={{ opacity: 0, width: 0 }}
+                        transition={{ duration: 0.4 }}
+                        layout
+                      >
+                        <div className="email-content">
+                           <div className="sender">
+                            <strong>{mail.senderName}</strong> {mail.senderEmail}
                           </div>
-                          <div className="email-body">
-                            <div className="sender">{mail.senderName || mail.from}{mail.isSpam && <span className="spam-warning">⚠️</span>}</div>
-                            <h3 className="subject">{mail.subject}</h3>
-                            {/* SNIPPET REMOVED TO RESTORE ORIGINAL DESIGN */}
+                          <div className="subject">{mail.subject}</div>
+                          <div className="snippet">{mail.snippet}</div>
+                        </div>
+                        <div className="email-meta">
+                          <div className="labels-container">
+                            <span className={`label ${getLabelClass(mail.label)}`}>
+                              {getLabelText(mail.label)}
+                            </span>
+                             {/* You can add more labels here if your backend provides them */}
                           </div>
-                          <div className="email-footer">
-                            <span className="time">{new Date(mail.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                            {!mail.isRead && <span className="unread-indicator"></span>}
-                          </div>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  </div>
-                   <button className="scroll-arrow right" onClick={() => handleScroll(account, 'right')} aria-label="Scroll right"><FiChevronRight /></button>
+                          <span className="timestamp">{formatTimeAgo(mail.date)}</span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
               </div>
             ))}
+             {filteredEmails.length === 0 && !isLoading && (
+              <div className="no-emails">
+                {emails.length === 0 ? "No emails found. Connect an account." : "No emails match your search."}
+              </div>
+            )}
           </div>
         )}
       </div>
