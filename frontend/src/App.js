@@ -11,7 +11,6 @@ function App() {
   const [error, setError] = useState(null);
   const [isCopied, setIsCopied] = useState(false);
 
-  // useRef to hold references to each scrollable div
   const scrollRefs = useRef({});
 
   const BACKEND_URL = "https://cognitive-isabella-gmass-9839fc62.koyeb.app";
@@ -53,26 +52,22 @@ function App() {
 
   const accountsList = Object.keys(groupedEmails);
 
-  // --- NEW: Function to handle copying account list to clipboard ---
   const handleCopy = () => {
     const accountString = accountsList.join(';');
     navigator.clipboard.writeText(accountString).then(() => {
       setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000); // Reset message after 2 seconds
+      setTimeout(() => setIsCopied(false), 2000);
     });
   };
 
-  // --- NEW: Function to scroll the email rows ---
   const handleScroll = (account, direction) => {
     const element = scrollRefs.current[account];
     if (element) {
-      // scroll by card width (300) + gap (15)
       const scrollAmount = direction === 'left' ? -315 : 315;
       element.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
   };
   
-  // --- NEW: Function to get a CSS class for the card background color ---
   const getCardClass = (label) => {
     switch (label) {
       case "INBOX": return "card-inbox";
@@ -80,11 +75,10 @@ function App() {
       case "UPDATES": return "card-updates";
       case "FORUMS": return "card-forums";
       case "SPAM": return "card-spam";
-      default: return ""; // Will use the default background
+      default: return "";
     }
   };
 
-  // This function is unchanged
   const getLabelColor = (label) => {
     switch (label) {
       case "INBOX": return "var(--inbox-color)";
@@ -101,7 +95,6 @@ function App() {
     }
   };
 
-  // This function is unchanged
   const getLabelText = (label) => {
     if (!label) return "Inbox";
     return label.charAt(0) + label.slice(1).toLowerCase();
@@ -118,7 +111,6 @@ function App() {
           />
         </div>
         
-        {/* --- NEW: Copyable Accounts Section --- */}
         {accountsList.length > 0 && (
           <div className="copy-accounts-section">
             <h4>1. Start the Free Email Tester by Sending Your Campaign to These Addresses:</h4>
@@ -148,7 +140,6 @@ function App() {
                   <FiUser className="account-icon" />
                   <h3>{account}</h3>
                 </div>
-                {/* --- NEW: Wrapper for scroll container and arrows --- */}
                 <div className="scroll-wrapper">
                   <button className="scroll-arrow left" onClick={() => handleScroll(account, 'left')} aria-label="Scroll left"><FiChevronLeft /></button>
                   <div 
@@ -159,7 +150,6 @@ function App() {
                       {groupedEmails[account].map((mail) => (
                         <motion.div
                           key={mail.id}
-                          // --- MODIFIED: Added getCardClass for dynamic background color ---
                           className={`email-card-horizontal ${getCardClass(mail.label)} ${mail.isSpam ? 'spam' : ''} ${!mail.isRead ? 'unread' : ''}`}
                           initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
@@ -168,13 +158,12 @@ function App() {
                         >
                           <div className="email-header">
                             <div className="avatar">{(mail.senderName || mail.from).charAt(0).toUpperCase()}</div>
-                            {/* --- UNCHANGED: Kept your original inline style logic --- */}
                             <div className="email-label" style={{ backgroundColor: getLabelColor(mail.label) }}>{getLabelText(mail.label)}</div>
                           </div>
                           <div className="email-body">
                             <div className="sender">{mail.senderName || mail.from}{mail.isSpam && <span className="spam-warning">⚠️</span>}</div>
                             <h3 className="subject">{mail.subject}</h3>
-                            <p className="snippet">{mail.snippet}</p>
+                            {/* SNIPPET REMOVED TO RESTORE ORIGINAL DESIGN */}
                           </div>
                           <div className="email-footer">
                             <span className="time">{new Date(mail.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
