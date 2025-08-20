@@ -12,12 +12,12 @@
   --draft-color: #f3f4f6;
   --default-color: #e5e7eb;
 
-  /* --- NEW: Modern & Subtle Card Background Colors --- */
-  --card-bg-inbox: #E6F8F0;      /* Modern Green */
-  --card-bg-promotions: #F3FBF6;  /* Lighter Modern Green */
-  --card-bg-updates: #FFFBEA;     /* Modern Yellow */
-  --card-bg-forums: #F4F0FF;      /* Modern Purple */
-  --card-bg-spam: #FDEBEB;        /* Modern Red */
+  /* --- MODIFIED: Modern & Accessible Card Background Colors --- */
+  --card-bg-inbox: #E6F8F0;                                /* Subtle Green for default inbox items */
+  --card-bg-promotions-gradient: linear-gradient(135deg, #E6F8F0 0%, #D4F4E4 100%); /* Gradient from green to light green */
+  --card-bg-updates: #FFFBEA;                              /* Accessible Yellow */
+  --card-bg-forums: #F4F0FF;                               /* Accessible Purple */
+  --card-bg-spam: #FDEBEB;                                 /* Accessible Red */
   
   /* Original UI Colors */
   --primary-bg: #f5f7fa;
@@ -55,7 +55,7 @@ body {
   background-color: var(--primary-bg);
 }
 
-/* --- Copy Accounts Section (Styled to match your design) --- */
+/* --- Copy Accounts Section --- */
 .copy-accounts-section {
   border: 1px solid var(--border-color);
   background-color: var(--card-bg);
@@ -100,20 +100,20 @@ body {
   background-color: #1e40af;
 }
 
-/* --- Search & Status Messages (Original) --- */
+/* --- Search & Status Messages --- */
 .search-bar { margin-bottom: 25px; }
 .search-bar input { width: 100%; padding: 12px 18px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
 .search-bar input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
 .loading-indicator, .no-emails { text-align: center; padding: 50px; color: var(--text-secondary); font-size: 1.1rem; }
 .error-message { background: #fee2e2; color: #dc2626; padding: 12px; border-radius: 8px; margin-bottom: 20px; }
 
-/* --- Account Sections (Original) --- */
+/* --- Account Sections --- */
 .accounts-container { display: flex; flex-direction: column; gap: 20px; }
 .account-section { margin-bottom: 30px; }
 .account-header { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; color: var(--text-primary); font-size: 1.2rem; font-weight: 600; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
 .account-icon { font-size: 1.3rem; color: var(--primary-blue); }
 
-/* --- Scroll Wrapper & Arrows (Styled Subtly) --- */
+/* --- Scroll Wrapper & Arrows --- */
 .scroll-wrapper { position: relative; }
 .scroll-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 5; background-color: var(--card-bg); border: 1px solid var(--border-color); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-secondary); box-shadow: 0 2px 4px rgba(0,0,0,0.06); opacity: 0; transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out; }
 .scroll-wrapper:hover .scroll-arrow { opacity: 1; }
@@ -121,16 +121,15 @@ body {
 .scroll-arrow.left { left: -18px; }
 .scroll-arrow.right { right: -18px; }
 
-/* --- Horizontal Email Scroll (Original) --- */
+/* --- Horizontal Email Scroll --- */
 .emails-horizontal-scroll { display: flex; overflow-x: auto; gap: 15px; padding: 15px 5px; scrollbar-width: thin; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
 .emails-horizontal-scroll::-webkit-scrollbar { height: 8px; }
 .emails-horizontal-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-/* --- Email Card Styling (Original, with modifications) --- */
+/* --- Email Card Styling --- */
 .email-card-horizontal {
   min-width: 300px;
   max-width: 300px;
-  /* MODIFIED: Height adjusted for cleaner look without snippet */
   height: 160px; 
   background: var(--card-bg);
   border-radius: 12px;
@@ -142,12 +141,12 @@ body {
   scroll-snap-align: start;
   flex-shrink: 0;
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s;
+  transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s, background-image 0.3s;
 }
 
-/* --- NEW: Card Background Color Classes --- */
+/* --- MODIFIED: Card Background Color Classes --- */
 .email-card-horizontal.card-inbox { background-color: var(--card-bg-inbox); }
-.email-card-horizontal.card-promotions { background-color: var(--card-bg-promotions); }
+.email-card-horizontal.card-promotions { background-image: var(--card-bg-promotions-gradient); }
 .email-card-horizontal.card-updates { background-color: var(--card-bg-updates); }
 .email-card-horizontal.card-forums { background-color: var(--card-bg-forums); }
 .email-card-horizontal.card-spam { background-color: var(--card-bg-spam); }
@@ -158,7 +157,6 @@ body {
 .email-label { margin-left: auto; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; font-weight: 600; color: var(--text-primary); }
 
 .email-body {
-  /* MODIFIED: Grow to push footer down */
   flex-grow: 1; 
   overflow: hidden;
   display: flex;
@@ -169,10 +167,7 @@ body {
 .spam-warning { color: var(--spam-red); margin-left: 5px; }
 .subject { font-weight: 500; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* SNIPPET CLASS REMOVED */
-
 .email-footer { 
-  /* MODIFIED: margin-top: auto is no longer needed due to flex-grow on body */
   display: flex; 
   justify-content: flex-end; 
   align-items: center; 
@@ -180,9 +175,9 @@ body {
 }
 .time { font-size: 0.8rem; color: var(--text-muted); }
 
-/* --- Special Email States (Original) --- */
-.email-card-horizontal.spam { border-left: 4px solid var(--spam-red); /* opacity removed for better color visibility */ }
-.email-card-horizontal.spam .email-label { background-color: var(--spam-color) !important; color: var(--spam-red) !important; }
+/* --- Special Email States --- */
+.email-card-horizontal.spam { border-left: 4px solid var(--spam-red); }
+.email-card-horizontal.spam .email-label { background-color: var(--spam-color); color: var(--spam-red); }
 .email-card-horizontal.unread { border-left: 4px solid var(--primary-blue); background-color: #fcfdff; }
 .email-card-horizontal.unread .sender,
 .email-card-horizontal.unread .subject { font-weight: 700; color: var(--text-primary); }
