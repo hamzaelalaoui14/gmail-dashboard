@@ -1,5 +1,5 @@
 :root {
-  /* Label Tag Colors (Original) */
+  /* Label Tag Colors */
   --inbox-color: #27B81F;
   --promotions-color: #BDF257;
   --updates-color: #FFC300;
@@ -12,14 +12,14 @@
   --draft-color: #f3f4f6;
   --default-color: #e5e7eb;
 
-  /* --- MODIFIED: Modern & Accessible Card Background Colors --- */
-  --card-bg-inbox: #E6F8F0;                                /* Subtle Green for default inbox items */
-  --card-bg-promotions-gradient: linear-gradient(135deg, #E6F8F0 0%, #D4F4E4 100%); /* Gradient from green to light green */
-  --card-bg-updates: #FFFBEA;                              /* Accessible Yellow */
-  --card-bg-forums: #F4F0FF;                               /* Accessible Purple */
-  --card-bg-spam: #FDEBEB;                                 /* Accessible Red */
+  /* Modern Card Background Colors */
+  --card-bg-inbox: #E6F8F0;
+  --card-bg-promotions-gradient: linear-gradient(135deg, #E6F8F0 0%, #D4F4E4 100%);
+  --card-bg-updates: #FFFBEA;
+  --card-bg-forums: #F4F0FF;
+  --card-bg-spam: #FDEBEB;
   
-  /* Original UI Colors */
+  /* UI Colors */
   --primary-bg: #f5f7fa;
   --card-bg: #ffffff;
   --text-primary: #333333;
@@ -27,7 +27,7 @@
   --text-muted: #9ca3af;
   --border-color: #e5e7eb;
   --primary-blue: #2563eb;
-  --spam-red: #FFFFFF;
+  --spam-red: #dc2626; /* Changed from white to be more visible */
 }
 
 /* --- Global Styles & Resets --- */
@@ -144,7 +144,6 @@ body {
   transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s, background-image 0.3s;
 }
 
-/* --- MODIFIED: Card Background Color Classes --- */
 .email-card-horizontal.card-inbox { background-color: var(--card-bg-inbox); }
 .email-card-horizontal.card-promotions { background-image: var(--card-bg-promotions-gradient); }
 .email-card-horizontal.card-updates { background-color: var(--card-bg-updates); }
@@ -163,9 +162,35 @@ body {
   flex-direction: column;
 }
 
-.sender { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 1rem; }
+/* --- FIX STARTS HERE --- */
+
+/* MODIFIED: Sender name will now wrap and be limited to 2 lines */
+.sender {
+  font-weight: 600;
+  font-size: 1rem;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Limit to 2 lines */
+  -webkit-box-orient: vertical;
+}
+
 .spam-warning { color: var(--spam-red); margin-left: 5px; }
-.subject { font-weight: 500; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* MODIFIED: Subject will now wrap and be limited to 2 lines */
+.subject {
+  font-weight: 500;
+  margin-top: 4px;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Limit to 2 lines */
+  -webkit-box-orient: vertical;
+}
+
+/* --- FIX ENDS HERE --- */
 
 .email-footer { 
   display: flex; 
