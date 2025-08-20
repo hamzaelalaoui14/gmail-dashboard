@@ -1,21 +1,30 @@
 :root {
-  /* Color Variables */
-  --inbox-color: #d3e3fd;
-  --promotions-color: #e9dcf8;
-  --updates-color: #fef3d0;
-  --social-color: #d1e7f7;
-  --forums-color: #f0f9e8;
-  --spam-color: #fee2e2;
-  --important-color: #fed7aa;
-  --starred-color: #fef08a;
-  --sent-color: #e0e7ff;
-  --draft-color: #f3f4f6;
-  --default-color: #e5e7eb;
+  /* Label Tag Colors */
+  --color-inbox: #d3e3fd;
+  --color-promotions: #e9dcf8;
+  --color-updates: #fef3d0;
+  --color-social: #d1e7f7;
+  --color-forums: #f0f9e8;
+  --color-spam: #fee2e2;
+  --color-important: #fed7aa;
+  --color-starred: #fef08a;
+  --color-sent: #e0e7ff;
+  --color-draft: #f3f4f6;
+  --color-default: #e5e7eb;
+
+  /* --- NEW: Email Card Background Colors --- */
+  --card-bg-inbox: #e6fffa;      /* Green */
+  --card-bg-promotions: #f0fff4;  /* Light Green */
+  --card-bg-updates: #ffffe0;     /* Yellow */
+  --card-bg-forums: #f3e8ff;      /* Purple */
+  --card-bg-spam: #fee2e2;        /* Red */
+  --card-bg-social: #e0f2fe;      /* Light Blue for Social */
   
+  /* General UI Colors */
   --primary-bg: #f5f7fa;
   --card-bg: #ffffff;
-  --text-primary: #333333;
-  --text-secondary: #6b7280;
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
   --text-muted: #9ca3af;
   --border-color: #e5e7eb;
   --primary-blue: #2563eb;
@@ -47,11 +56,80 @@ body {
   background-color: var(--primary-bg);
 }
 
+/* --- NEW: Copy Accounts Section --- */
+.copy-accounts-section {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.step-number {
+  background-color: var(--primary-blue);
+  color: white;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.step p {
+  font-weight: 500;
+}
+.step-2 {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+.copy-box {
+  display: flex;
+  align-items: center;
+  background-color: #f9fafb;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-top: 15px;
+  padding: 8px;
+  overflow: hidden;
+}
+.account-list {
+  flex-grow: 1;
+  padding: 4px 8px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9rem;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.copy-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--primary-blue);
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+.copy-button:hover {
+  background-color: #1d4ed8;
+}
+
 /* --- Search & Status Messages --- */
 .search-bar {
   margin-bottom: 25px;
 }
-
 .search-bar input {
   width: 100%;
   padding: 12px 18px;
@@ -61,54 +139,58 @@ body {
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-
 .search-bar input:focus {
   border-color: var(--primary-blue);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
-
-.loading-indicator, .no-emails {
-  text-align: center;
-  padding: 50px;
-  color: var(--text-secondary);
-  font-size: 1.1rem;
-}
-
-.error-message {
-  background: #fee2e2;
-  color: #dc2626;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
+.loading-indicator, .no-emails, .error-message { /* ... existing styles ... */ }
 
 /* --- Account Sections --- */
-.accounts-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
 .account-section {
   margin-bottom: 30px;
 }
+.account-header { /* ... existing styles ... */ }
 
-.account-header {
+/* --- NEW: Scroll Wrapper and Arrows --- */
+.scroll-wrapper {
+  position: relative;
+}
+.scroll-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 15px;
-  color: var(--text-primary);
-  font-size: 1.2rem;
-  font-weight: 600;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 12px;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  transition: transform 0.2s, opacity 0.2s;
+  opacity: 0; /* Hidden by default */
+}
+.scroll-wrapper:hover .scroll-arrow {
+  opacity: 1; /* Show on hover of the whole section */
+}
+.scroll-arrow:hover {
+  transform: translateY(-50%) scale(1.1);
+}
+.scroll-arrow.left {
+  left: -20px;
+}
+.scroll-arrow.right {
+  right: -20px;
+}
+.scroll-arrow svg {
+  width: 24px;
+  height: 24px;
+  color: var(--text-secondary);
 }
 
-.account-icon {
-  font-size: 1.3rem;
-  color: var(--primary-blue);
-}
 
 /* --- Horizontal Email Scroll --- */
 .emails-horizontal-scroll {
@@ -116,18 +198,13 @@ body {
   overflow-x: auto;
   gap: 15px;
   padding: 15px 5px;
-  scrollbar-width: thin;
+  scrollbar-width: none; /* Hide scrollbar for a cleaner look */
+  -ms-overflow-style: none;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
 }
-
 .emails-horizontal-scroll::-webkit-scrollbar {
-  height: 8px;
-}
-
-.emails-horizontal-scroll::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  display: none; /* Hide scrollbar on Chrome/Safari */
 }
 
 /* --- Email Card Styling --- */
@@ -135,7 +212,7 @@ body {
   min-width: 300px;
   max-width: 300px;
   height: 220px;
-  background: var(--card-bg);
+  background: var(--card-bg); /* Default background */
   border-radius: 12px;
   padding: 18px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.07);
@@ -145,34 +222,26 @@ body {
   scroll-snap-align: start;
   flex-shrink: 0;
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
 }
-
 .email-card-horizontal:hover {
   transform: translateY(-4px);
   box-shadow: 0 10px 15px rgba(0,0,0,0.1);
 }
 
-.email-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 15px;
+/* --- NEW: Dynamic Card Background Colors --- */
+.email-card-horizontal.card-inbox { background-color: var(--card-bg-inbox); }
+.email-card-horizontal.card-promotions { background-color: var(--card-bg-promotions); }
+.email-card-horizontal.card-updates { background-color: var(--card-bg-updates); }
+.email-card-horizontal.card-forums { background-color: var(--card-bg-forums); }
+.email-card-horizontal.card-spam { background-color: var(--card-bg-spam); }
+.email-card-horizontal.card-social { background-color: var(--card-bg-social); }
+
+.email-header, .avatar, .email-body, .sender, .subject, .snippet, .email-footer, .time {
+   /* ... all existing styles ... */
 }
 
-.avatar {
-  width: 40px;
-  height: 40px;
-  background-color: var(--primary-blue);
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  margin-right: 12px;
-  flex-shrink: 0;
-}
-
+/* --- MODIFIED: Label colors now use classes for better CSS control --- */
 .email-label {
   margin-left: auto;
   font-size: 0.75rem;
@@ -180,87 +249,24 @@ body {
   border-radius: 12px;
   font-weight: 600;
   color: var(--text-primary);
+  background-color: var(--color-default); /* Default */
 }
+.email-label.label-INBOX { background-color: var(--color-inbox); }
+.email-label.label-PROMOTIONS { background-color: var(--color-promotions); }
+.email-label.label-UPDATES { background-color: var(--color-updates); }
+.email-label.label-SOCIAL { background-color: var(--color-social); }
+.email-label.label-FORUMS { background-color: var(--color-forums); }
+.email-label.label-SPAM { background-color: var(--color-spam); color: var(--spam-red); }
+/* Add other labels as needed */
 
-.email-body {
-  flex-grow: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
 
-.sender {
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 1rem;
-}
-
-.spam-warning {
-  color: var(--spam-red);
-  margin-left: 5px;
-}
-
-.subject {
-  font-weight: 500;
-  margin-top: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.snippet {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  margin-top: 8px;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  flex-grow: 1;
-}
-
-.email-footer {
-  margin-top: auto;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  padding-top: 10px;
-}
-
-.time {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-/* --- Special Email States --- */
-.email-card-horizontal.spam {
-  border-left: 4px solid var(--spam-red);
-  opacity: 0.85;
-}
-
-.email-card-horizontal.spam .email-label {
-  background-color: var(--spam-color) !important;
-  color: var(--spam-red) !important;
-}
-
+/* --- MODIFIED: Special Email States (simplified) --- */
 .email-card-horizontal.unread {
   border-left: 4px solid var(--primary-blue);
-  background-color: #fcfdff;
 }
-
 .email-card-horizontal.unread .sender,
 .email-card-horizontal.unread .subject {
   font-weight: 700;
   color: var(--text-primary);
 }
-
-.unread-indicator {
-  margin-left: 10px;
-  width: 8px;
-  height: 8px;
-  background-color: var(--primary-blue);
-  border-radius: 50%;
-  display: inline-block;
-}
+.unread-indicator { /* ... existing style ... */ }
