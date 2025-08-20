@@ -1,11 +1,11 @@
 :root {
   /* Label Tag Colors (Original) */
-  --inbox-color: #d3e3fd;
-  --promotions-color: #e9dcf8;
-  --updates-color: #fef3d0;
-  --social-color: #d1e7f7;
-  --forums-color: #f0f9e8;
-  --spam-color: #fee2e2;
+  --inbox-color: #27B81F;
+  --promotions-color: #BDF257;
+  --updates-color: #FFC300;
+  --social-color: #0097FF;
+  --forums-color: #3700FF;
+  --spam-color: #FF0000;
   --important-color: #fed7aa;
   --starred-color: #fef08a;
   --sent-color: #e0e7ff;
