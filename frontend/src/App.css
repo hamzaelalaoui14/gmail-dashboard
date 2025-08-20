@@ -163,9 +163,9 @@ body {
   flex-direction: column;
 }
 
-.sender { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 1rem; }
+.sender { font-weight: 600; white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 1rem; }
 .spam-warning { color: var(--spam-red); margin-left: 5px; }
-.subject { font-weight: 500; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.subject { font-weight: 500; margin-top: 4px; white-space: normal; overflow: hidden; text-overflow: ellipsis; }
 
 .email-footer { 
   display: flex; 
