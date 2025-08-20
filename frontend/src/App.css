@@ -27,7 +27,7 @@
   --text-muted: #9ca3af;
   --border-color: #e5e7eb;
   --primary-blue: #2563eb;
-  --spam-red: #dc2626; /* Changed from white to be more visible */
+  --spam-red: #dc2626;
 }
 
 /* --- Global Styles & Resets --- */
@@ -130,7 +130,8 @@ body {
 .email-card-horizontal {
   min-width: 300px;
   max-width: 300px;
-  height: 160px; 
+  /* MODIFIED: Increased height to accommodate the 2-line subject */
+  height: 175px; 
   background: var(--card-bg);
   border-radius: 12px;
   padding: 18px;
@@ -144,6 +145,7 @@ body {
   transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s, background-image 0.3s;
 }
 
+/* --- MODIFIED: Card Background Color Classes --- */
 .email-card-horizontal.card-inbox { background-color: var(--card-bg-inbox); }
 .email-card-horizontal.card-promotions { background-image: var(--card-bg-promotions-gradient); }
 .email-card-horizontal.card-updates { background-color: var(--card-bg-updates); }
@@ -162,23 +164,19 @@ body {
   flex-direction: column;
 }
 
-/* --- FIX STARTS HERE --- */
+/* --- FIXES FOR TRUNCATION START HERE --- */
 
-/* MODIFIED: Sender name will now wrap and be limited to 2 lines */
-.sender {
-  font-weight: 600;
-  font-size: 1rem;
-  white-space: normal;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2; /* Limit to 2 lines */
-  -webkit-box-orient: vertical;
+/* Reverted sender to single-line truncation for a clean look */
+.sender { 
+  font-weight: 600; 
+  font-size: 1rem; 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
 }
-
 .spam-warning { color: var(--spam-red); margin-left: 5px; }
 
-/* MODIFIED: Subject will now wrap and be limited to 2 lines */
+/* Subject allows 2 lines of text */
 .subject {
   font-weight: 500;
   margin-top: 4px;
@@ -186,11 +184,11 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 2; /* Limit to 2 lines */
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
-/* --- FIX ENDS HERE --- */
+/* --- FIXES FOR TRUNCATION END HERE --- */
 
 .email-footer { 
   display: flex; 
