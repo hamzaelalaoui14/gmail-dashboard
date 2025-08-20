@@ -1,5 +1,5 @@
 :root {
-  /* Label Tag Colors */
+  /* Label Tag Colors (Original) */
   --inbox-color: #27B81F;
   --promotions-color: #BDF257;
   --updates-color: #FFC300;
@@ -12,14 +12,14 @@
   --draft-color: #f3f4f6;
   --default-color: #e5e7eb;
 
-  /* Modern Card Background Colors */
-  --card-bg-inbox: #E6F8F0;
-  --card-bg-promotions-gradient: linear-gradient(135deg, #E6F8F0 0%, #D4F4E4 100%);
-  --card-bg-updates: #FFFBEA;
-  --card-bg-forums: #F4F0FF;
-  --card-bg-spam: #FDEBEB;
+  /* --- MODIFIED: Modern & Accessible Card Background Colors --- */
+  --card-bg-inbox: #E6F8F0;                                /* Subtle Green for default inbox items */
+  --card-bg-promotions-gradient: linear-gradient(135deg, #E6F8F0 0%, #D4F4E4 100%); /* Gradient from green to light green */
+  --card-bg-updates: #FFFBEA;                              /* Accessible Yellow */
+  --card-bg-forums: #F4F0FF;                               /* Accessible Purple */
+  --card-bg-spam: #FDEBEB;                                 /* Accessible Red */
   
-  /* UI Colors */
+  /* Original UI Colors */
   --primary-bg: #f5f7fa;
   --card-bg: #ffffff;
   --text-primary: #333333;
@@ -27,7 +27,7 @@
   --text-muted: #9ca3af;
   --border-color: #e5e7eb;
   --primary-blue: #2563eb;
-  --spam-red: #dc2626;
+  --spam-red: #FFFFFF;
 }
 
 /* --- Global Styles & Resets --- */
@@ -130,8 +130,7 @@ body {
 .email-card-horizontal {
   min-width: 300px;
   max-width: 300px;
-  /* MODIFIED: Increased height to accommodate the 2-line subject */
-  height: 175px; 
+  height: 160px; 
   background: var(--card-bg);
   border-radius: 12px;
   padding: 18px;
@@ -164,31 +163,9 @@ body {
   flex-direction: column;
 }
 
-/* --- FIXES FOR TRUNCATION START HERE --- */
-
-/* Reverted sender to single-line truncation for a clean look */
-.sender { 
-  font-weight: 600; 
-  font-size: 1rem; 
-  white-space: nowrap; 
-  overflow: hidden; 
-  text-overflow: ellipsis; 
-}
+.sender { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 1rem; }
 .spam-warning { color: var(--spam-red); margin-left: 5px; }
-
-/* Subject allows 2 lines of text */
-.subject {
-  font-weight: 500;
-  margin-top: 4px;
-  white-space: normal;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-/* --- FIXES FOR TRUNCATION END HERE --- */
+.subject { font-weight: 500; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .email-footer { 
   display: flex; 
